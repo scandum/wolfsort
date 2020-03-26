@@ -5,8 +5,8 @@ This document describes a stable adaptive hybrid radix / merge sort named wolfso
 
 Quadsort
 --------
-[quadsort]((../quadsort "quadsort") is used for sorting arrays with fewer than 512
-elements, the partitions creates by wolfsort, as well as to sort any array that
+[quadsort](https://github.com/scandum/quadsort "quadsort") is used for sorting arrays with fewer than 512
+elements, as well as the partitions created by wolfsort, and to sort any array that
 fails partitioning.
 
 Adaptive partitioning
@@ -34,11 +34,11 @@ In all these cases quadsort is typically faster by itself.
 
 Partition in a way that is beneficial to quadsort
 -------------------------------------------------
-After partitioning completes the 256 buckets are in order, so all that's needed to finish up is to sort each buckets, and wolfsort is done.
+After partitioning completes the 256 buckets are in order, so all that's needed to finish up is to sort each bucket, and wolfsort is done.
 
 Memory overhead
 ---------------
-Wolfsort requires 8 times the array size in swap memory for the O(n) partitioning process, the following sorting process requires less than 1/32nd the array size in swap memory.
+Wolfsort requires 8 times the array size in swap memory for the O(n) partitioning process. The sorting process that follows requires less than 1/32nd the array size in swap memory.
 
 If not enough memory is available wolfsort falls back on quadsort which requires 1/2 the array size in swap memory. An important thing to note is that while quite a bit of memory is allocated most of it will remain untouched and unused, it's there just in case it's needed.
 
