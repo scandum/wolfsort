@@ -57,6 +57,9 @@ While more testing is needed it appears that in the 1K-100K element range wolfso
 
 Benchmark
 ---------
+The following benchmark was on WSL gcc version 7.4.0 (Ubuntu 7.4.0-1ubuntu1~18.04.1).
+The source code was compiled using g++ -O3 -fpermissive bench.c.
+Each test was ran 100 times and only the best run is reported.
 ```
   quadsort: sorted 1000000 i32s in 0.071601 seconds.  (random order)
 stablesort: sorted 1000000 i32s in 0.074852 seconds.  (random order)
