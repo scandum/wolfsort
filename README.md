@@ -5,7 +5,7 @@ This document describes a stable adaptive hybrid radix / merge sort named wolfso
 
 Why a hybrid?
 ------------------------
-While merge sort is very fast at the adaptive sorting of ordered data, its inability to effectively partition is its greatest weakness. Radix sort on the other hand is unable to take advantage of pre-ordered data. Wolfsort tries to avoid the worst case of each algorithm.
+While merge sort is very fast at sorting ordered data, its inability to effectively partition is its greatest weakness. Radix sort on the other hand is unable to take advantage of sorted data. Wolfsort tries to avoid the worst case of each algorithm.
 
 Adaptive partitioning
 ---------------------
@@ -42,13 +42,20 @@ Wolfsort requires 8 times the array size in swap memory for the O(n) partitionin
 The sorting process that follows requires 1/32nd the array size in swap memory.
 
 If not enough memory is available wolfsort falls back on quadsort which requires 1/2 the array
-size in swap memory. An important thing to note is that while quite a bit of memory is
-allocated most of it will remain unused, it's there just in case it's needed.
+size in swap memory.
 
 Virtual quantum partitioning
 ----------------------------
 
-While the memory overhead may seem like a bad thing, it can be considered a form of virtual quantum computing. Most modern systems have several gigabytes of memory that are not used and are just sitting idle. During the partitioning process the swap memory becomes akin to Schrödinger's cat, it may be used, or it may not be used. Based on probability we know only 1/8th will be directly accessed, but because there is 7/8th to spare assumptions can be made that significantly reduce complexity and computations.
+While the memory overhead may seem like a bad thing, it can be considered a form of virtual quantum computing.
+
+There's no real computational difference between allocating and freeing 80 MB of memory and allocating and freeing 10 MB of memory. Historically software was always low on memory, and subsequently sorting algorithms were developed that bent over backwards in order to use as little additional memory as possible. Nowadays most modern systems have several gigabytes of memory that are not used and are just sitting idle. 
+
+Instead of dynamically allocating memory as needed, or performing complex swap operations, or even more complex stable swap operations, wolfsort goes ahead and allocates enough memory to grow freely in any direction.
+
+Normally if an implementation were to do this they would multiply the memory overhead by 256 times for 256 buckets. However, wolfsort is only looking to partition perfectly random distributions, and subsequently it can reduce the bucket size by 1/32th, and abort the partition process the moment a bucket becomes full.
+
+During the partitioning process each bucket becomes akin to Schrödinger's cat, it may be used almost fully, not at all, or somewhere in between. Based on probability we know exactly 1/8th will be actually used. The only overhead is to keep track of the size of each bucket, and to check that the bucket is not overflowing upon each addition.
 
 While more testing is needed it appears that in the 1K-100K element range wolfsort outperforms most sorting algorithms for random numbers, possibly turning spare memory into computing power.
 
