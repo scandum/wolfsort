@@ -5,10 +5,9 @@ This document describes a stable adaptive hybrid radix / merge sort named wolfso
 
 Quadsort
 --------
-
-![Quadsort](https://github.com/scandum/quadsort) is used for sorting arrays
-with fewer than 512 elements, the partitions creates by wolfsort, as well as
-to sort any array that fails partitioning.
+[quadsort]((../quadsort "quadsort") is used for sorting arrays with fewer than 512
+elements, the partitions creates by wolfsort, as well as to sort any array that
+fails partitioning.
 
 Adaptive partitioning
 ---------------------
