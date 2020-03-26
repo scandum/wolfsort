@@ -46,8 +46,8 @@ If not enough memory is available wolfsort falls back on quadsort which requires
 size in swap memory. An important thing to note is that while quite a bit of memory is
 allocated most of it will remain untouched and unused, it's there just in case it's needed.
 
-Quantum partitioning
---------------------
+Virtual quantum partitioning
+----------------------------
 
 While the memory overhead may seem like a bad thing, it can be considered a form of virtual quantum computing. Most modern systems have several gigabytes of memory that are not used and are just sitting idle. During the partitioning process the swap memory becomes akin to Schrödinger's cat, it may be used, or it may not be used, based on probability we know only 1/8th will be directly accessed, but because there is 7/8th to spare assumptions can be made that significantly reduce complexity and computations.
 
