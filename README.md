@@ -44,9 +44,6 @@ The sorting process that follows requires 1/32nd the array size in swap memory.
 If not enough memory is available wolfsort falls back on quadsort which requires 1/2 the array
 size in swap memory.
 
-Virtual quantum partitioning
-----------------------------
-
 While the memory overhead may seem like a bad thing, it can be considered a form of virtual quantum computing.
 
 There's no real computational difference between allocating and freeing 80 MB of memory and allocating and freeing 10 MB of memory. Historically software was always low on memory, and subsequently sorting algorithms were developed that bent over backwards in order to use as little additional memory as possible. Nowadays most modern systems have several gigabytes of memory that are not used and are just sitting idle. 
