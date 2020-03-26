@@ -49,9 +49,9 @@ allocated most of it will remain untouched and unused, it's there just in case i
 Quantum partitioning
 --------------------
 
-While the memory overhead may seem like a bad thing, it can be considered a form of quantum computing. Most modern systems have several gigabytes of memory that are not used and are just sitting idle. During the partitioning process the swap memory becomes akin to Schrödinger's cat, it may be used, or it may not be used, based on probability we know only 1/8th will be directly accessed, but because there is 7/8th to spare assumptions can be made that significantly reduce complexity and computations.
+While the memory overhead may seem like a bad thing, it can be considered a form of virtual quantum computing. Most modern systems have several gigabytes of memory that are not used and are just sitting idle. During the partitioning process the swap memory becomes akin to Schrödinger's cat, it may be used, or it may not be used, based on probability we know only 1/8th will be directly accessed, but because there is 7/8th to spare assumptions can be made that significantly reduce complexity and computations.
 
-While more testing is needed it appears that in the 1K-100K element range wolfsort outperforms all currently existing sorts for random numbers, possibly turning spare memory into computing power.
+While more testing is needed it appears that in the 1K-100K element range wolfsort outperforms most sorting algorithms for random numbers, possibly turning spare memory into computing power.
 
 Benchmark
 ---------
