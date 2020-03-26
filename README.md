@@ -3,16 +3,13 @@ Intro
 
 This document describes a stable adaptive hybrid radix / merge sort named wolfsort.
 
-Quadsort
---------
-[quadsort](https://github.com/scandum/quadsort "quadsort") is used for sorting arrays with fewer than 512
-elements, as well as the partitions created by wolfsort, and to sort any array that
-fails partitioning.
+Why a hybrid?
+------------------------
+While merge sort is very fast at the adaptive sorting of ordered data, its inability to effectively partition is its greatest weakness. Radix sort on the other hand is unable to take advantage of pre-ordered data. Wolfsort tries to avoid the worst case of each algorithm.
 
 Adaptive partitioning
 ---------------------
-Since quadsort is very fast, except for purely random arrays, the partitioning processes
-has two primary functions.
+Wolfsort uses [quadsort](https://github.com/scandum/quadsort "quadsort") as its merge sort, which is very fast, except for purely random arrays, the adaptive partitioning processes has two primary functions.
 
 1. Detecting whether the array is worth partitioning.
 2. Partition in a way that is beneficial to quadsort.
@@ -26,15 +23,15 @@ divided by 16777216. The maximum bucket size is 1/32nd of the array size.
 If the maximum bucket size is reached the partitioning process is cancelled and quadsort
 is ran instead. The maximum bucket size is reached in three cases: 
 
-1. Many values are under 256, in which case partitioning is pointless.
-2. Many values are not random, in which case quadsort is faster.
+1. Many values are under 256, in which case all the values gather in the first bucket.
+2. Many values are not random, in which case quadsort is likely to be faster.
 3. Many values are repetitions, in which case partitioning is inefficient.
 
 In all these cases quadsort is typically faster by itself while an aborted partitioning
 does not notably hamper performance.
 
-Partition in a way that is beneficial to quadsort
--------------------------------------------------
+Partition in a way that is beneficial to merge sort
+---------------------------------------------------
 Because this approach is the equivalent of an in-place MSD Radix sort the 256 buckets are
 in order once partitioning completes. The next step is to sort the content of each bucket,
 and wolfsort will be finished.
