@@ -92,6 +92,7 @@ stablesort: sorted 1000000 i32s in 0.044522 seconds.  (random half)
    pdqsort: sorted 1000000 i32s in 0.029573 seconds.  (random half)
   wolfsort: sorted 1000000 i32s in 0.016424 seconds.  (random half)
 ```
+![Graph](/graph2.png)
 
 ```
   quadsort: sorted 1000000 i32s in 0.071601 seconds.  (random order)
