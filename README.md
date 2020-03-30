@@ -54,7 +54,12 @@ Normally if an implementation were to do this they would multiply the memory ove
 
 During the partitioning process each bucket becomes akin to Schrödinger's cat, it may be used almost fully, not at all, or somewhere in between. Based on probability we know exactly 1/8th will be actually used. The only overhead is to keep track of the size of each bucket, and to check that the bucket is not overflowing upon each addition.
 
-While more testing is needed it appears that in the 1K-100K element range wolfsort outperforms most sorting algorithms for random numbers, possibly turning spare memory into computing power.
+Proof of concept
+----------------
+
+Wolfsort is primarily a proof of concept, currently it only supports unsigned 32 and 64 bit integers.
+
+Memory allocation with malloc() is a bottleneck on many platforms. Using a custom memory allocator or permanent swap memory is a possible solution. 
 
 Benchmark
 ---------
