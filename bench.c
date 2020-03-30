@@ -26,6 +26,10 @@
 #include <errno.h>
 #include <algorithm>
 #include "wolfsort.h"
+//#include "timsort.h"
+//#include "pdqsort.h"
+
+//#include "skensort.h"
 
 //#include "pdqsort.h" // https://github.com/orlp/pdqsort/blob/master/pdqsort.h
 //#include "timsort.h" // https://github.com/timsort/cpp-TimSort/blob/master/include/gfx/timsort.hpp
@@ -104,12 +108,12 @@ int generate_rand()
 
 void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximum, int samples, int repetitions, SRTFUNC *srt, const char *name, const char *desc, size_t size, CMPFUNC *cmpf)
 {
-	long long start, end, total, best;
+	long long start, end, total, best, average;
 	size_t rep, sam, max;
 	long long *ptla = array;
 	int *pta = array, *ptv = valid, cnt;
 
-	best = 0;
+	best = average = 0;
 
 	for (sam = 0 ; sam < samples ; sam++)
 	{
@@ -152,28 +156,34 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 					break;
 
 				case 'p':
-					return;
+#ifdef PDQSORT_H
 					if (size == sizeof(int))
 					{
-//						pdqsort(pta, pta + max);
+						pdqsort(pta, pta + max);
 					}
 					else
 					{
-//						pdqsort(ptla, ptla + max);
+						pdqsort(ptla, ptla + max);
 					}
 					break;
-					
+#else
+					return;
+#endif
+
 				case 't':
-					return;
+#ifdef GFX_TIMSORT_HPP
 					if (size == sizeof(int))
 					{
-//						gfx::timsort(pta, pta + max);
+						gfx::timsort(pta, pta + max);
 					}
 					else
 					{
-//						gfx::timsort(ptla, ptla + max);
+						gfx::timsort(ptla, ptla + max);
 					}
 					break;
+#else
+					return;
+#endif
 			}
 
 			end = utime();
@@ -201,12 +211,15 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 		{
 			best = total;
 		}
+		average += total;
 	}
 
 	if (repetitions == 0)
 	{
 		return;
 	}
+
+	average /= samples;
 
 	if (cmpf == cmp_stable)
 	{
@@ -231,17 +244,26 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 		}
 	}
 
-	if (maximum == 1000)
+	if (*name == 'q')
 	{
-		printf("%17s: sorted %7d i%ds in %f seconds. KO: %5lld (%s)\n", name, maximum, (int) size * 8, best / 1000000.0, counter, desc);
+		if (!strcmp(desc, "random order"))
+		{
+			printf("%s\n", "|      Name |    Items | Type |     Best |  Average | Comparisons |     Distribution |");
+			printf("%s\n", "| --------- | -------- | ---- | -------- | -------- | ----------- | ---------------- |");
+		}
+		else
+		{
+			printf("%s\n", "|           |          |      |          |          |             |                  |");
+		}
 	}
-	else if (maximum == 1000000)
+
+	if (counter)
 	{
-		printf("%17s: sorted %7d i%ds in %f seconds. MO: %10lld (%s)\n", name, maximum, (int) size * 8, best / 1000000.0, counter, desc);
+		printf("|%10s | %8d |  i%d | %f | %f | %11lld | %16s |\n", name, maximum, (int) size * 8, best / 1000000.0, average / 1000000.0, counter, desc);
 	}
 	else
 	{
-		printf("%17s: sorted %7d i%ds in %f seconds. (%s)\n", name, maximum, (int) size * 8, best / 1000000.0, desc);
+		printf("|%10s | %8d |  i%d | %f | %f | %11s | %16s |\n", name, maximum, (int) size * 8, best / 1000000.0, average / 1000000.0, " ", desc);
 	}
 
 	if (minimum != maximum)
@@ -432,15 +454,13 @@ void validate()
 	free(a_array);
 	free(r_array);
 	free(v_array);
-
-	printf("validated\n");
 }
 
 
 int main(int argc, char **argv)
 {
 	int max = 100000;
-	int samples = 10;
+	int samples = 100;
 	int repetitions = 1;
 
 	size_t cnt, rnd;
@@ -462,7 +482,7 @@ int main(int argc, char **argv)
 		repetitions = atoi(argv[3]);
 	}
 
-//	validate();
+	validate();
 
 	rnd = time(NULL);
 
@@ -525,7 +545,7 @@ int main(int argc, char **argv)
 	test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort,           "pdqsort",        "random order", sizeof(int), cmp_int);
 	test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort,           "wolfsort",        "random order", sizeof(int), cmp_int);
 
-	printf("\n");
+//	printf("\n");
 
 	// ascending
 
@@ -545,7 +565,7 @@ int main(int argc, char **argv)
 	test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort,           "pdqsort",        "ascending", sizeof(int), cmp_int);
 	test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort,           "wolfsort",        "ascending", sizeof(int), cmp_int);
 
-	printf("\n");
+//	printf("\n");
 
 	// ascending saw
 
@@ -569,7 +589,7 @@ int main(int argc, char **argv)
 	test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort,           "pdqsort",        "ascending saw", sizeof(int), cmp_int);
 	test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort,           "wolfsort",        "ascending saw", sizeof(int), cmp_int);
 
-	printf("\n");
+//	printf("\n");
 
 	// uniform
 
@@ -588,7 +608,7 @@ int main(int argc, char **argv)
 	test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort,           "wolfsort",         "generic order", sizeof(int), cmp_int);
 
 
-	printf("\n");
+//	printf("\n");
 
         // descending
 
@@ -606,7 +626,7 @@ int main(int argc, char **argv)
 	test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort,           "pdqsort",         "descending order", sizeof(int), cmp_int);
 	test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort,           "wolfsort",         "descending order", sizeof(int), cmp_int);
 
-	printf("\n");
+//	printf("\n");
 
         // descending saw
 
@@ -623,7 +643,7 @@ int main(int argc, char **argv)
 	test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort,           "pdqsort",         "descending saw", sizeof(int), cmp_int);
 	test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort,           "wolfsort",         "descending saw", sizeof(int), cmp_int);
 
-	printf("\n");
+//	printf("\n");
 
 	// random tail
 
@@ -652,7 +672,7 @@ int main(int argc, char **argv)
 	test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort,           "pdqsort",         "random tail", sizeof(int), cmp_int);
 	test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort,           "wolfsort",         "random tail", sizeof(int), cmp_int);
 
-	printf("\n");
+//	printf("\n");
 
 	seed_rand(rnd);
 
@@ -669,19 +689,19 @@ int main(int argc, char **argv)
 	}
 
         memcpy(v_array, r_array, max * sizeof(int));
-        quadsort(v_array, max / 2, sizeof(int), cmp_int);
+	quadsort(v_array, max / 2, sizeof(int), cmp_int);
 //      quadsort(v_array + max / 2, max / 2, sizeof(int), cmp_int);
 
-        memcpy(r_array, v_array, max * sizeof(int));
-        quadsort(v_array, max, sizeof(int), cmp_int);
+	memcpy(r_array, v_array, max * sizeof(int));
+	quadsort(v_array, max, sizeof(int), cmp_int);
 
-        test_sort(a_array, r_array, v_array, max, max, samples, repetitions, quadsort,        "quadsort",        "random half", sizeof(int), cmp_int);
-        test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort,           "stablesort",           "random half", sizeof(int), cmp_int);
-        test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort,           "timsort",           "random half", sizeof(int), cmp_int);
-        test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort,           "pdqsort",           "random half", sizeof(int), cmp_int);
-        test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort,           "wolfsort",           "random half", sizeof(int), cmp_int);
+	test_sort(a_array, r_array, v_array, max, max, samples, repetitions, quadsort,        "quadsort",        "random half", sizeof(int), cmp_int);
+	test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort,           "stablesort",           "random half", sizeof(int), cmp_int);
+	test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort,           "timsort",           "random half", sizeof(int), cmp_int);
+	test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort,           "pdqsort",           "random half", sizeof(int), cmp_int);
+	test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort,           "wolfsort",           "random half", sizeof(int), cmp_int);
 
-        printf("\n");
+//	printf("\n");
 
 	// wave ?
 
@@ -706,7 +726,7 @@ int main(int argc, char **argv)
 	test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort,           "pdqsort",          "wave order", sizeof(int), cmp_int);
 	test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort,           "wolfsort",          "wave order", sizeof(int), cmp_int);
 
-	printf("\n");
+//	printf("\n");
 
 	test_sort(a_array, r_array, v_array, max, max, samples, repetitions, quadsort,        "quadsort",       "stable", sizeof(int), cmp_stable);
 	test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort,           "stablesort",        "stable", sizeof(int), cmp_stable);
@@ -714,7 +734,7 @@ int main(int argc, char **argv)
 	test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort,           "pdqsort",        "stable", sizeof(int), cmp_stable);
 	test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort,           "wolfsort",        "stable", sizeof(int), cmp_stable);
 
-	printf("\n");
+//	printf("\n");
 
 	if (repetitions > 0)
 	{
@@ -741,7 +761,7 @@ int main(int argc, char **argv)
 		test_sort(a_array, r_array, v_array, 1, 4, 500, 100, qsort,           "pdqsort",           "random 1-4", sizeof(int), cmp_int);
 		test_sort(a_array, r_array, v_array, 1, 4, 500, 100, qsort,           "wolfsort",           "random 1-4", sizeof(int), cmp_int);
 
-		printf("\n");
+	//	printf("\n");
 
 		seed_rand(rnd);
 
@@ -759,7 +779,7 @@ int main(int argc, char **argv)
 		test_sort(a_array, r_array, v_array, 5, 8, 500, 100, qsort,           "pdqsort",           "random 5-8", sizeof(int), cmp_int);
 		test_sort(a_array, r_array, v_array, 5, 8, 500, 100, qsort,           "wolfsort",           "random 5-8", sizeof(int), cmp_int);
 
-		printf("\n");
+	//	printf("\n");
 
 		seed_rand(rnd);
 
@@ -777,7 +797,7 @@ int main(int argc, char **argv)
 		test_sort(a_array, r_array, v_array, 9, 15, 500, 100, qsort,           "pdqsort",           "random 9-15", sizeof(int), cmp_int);
 		test_sort(a_array, r_array, v_array, 9, 15, 500, 100, qsort,           "wolfsort",           "random 9-15", sizeof(int), cmp_int);
 
-		printf("\n");
+	//	printf("\n");
 
 		seed_rand(rnd);
 
@@ -797,7 +817,7 @@ int main(int argc, char **argv)
 
 	}
 
-	printf("\n");
+//	printf("\n");
 
 	if (max >= 64)
 	{
@@ -820,7 +840,7 @@ int main(int argc, char **argv)
 		test_sort(a_array, r_array, v_array, 16, 63, 500, 100, qsort,           "wolfsort",           "random 16-63", sizeof(int), cmp_int);
 	}
 
-	printf("\n");
+//	printf("\n");
 
 	if (max >= 128)
 	{
@@ -843,7 +863,7 @@ int main(int argc, char **argv)
 		test_sort(a_array, r_array, v_array, 64, 127, 500, 100, qsort,           "wolfsort",           "random 64-127", sizeof(int), cmp_int);
 	}
 
-	printf("\n");
+//	printf("\n");
 
 	if (max >= 256)
 	{
@@ -866,7 +886,7 @@ int main(int argc, char **argv)
 		test_sort(a_array, r_array, v_array, 127, 255, 500, 128, qsort,           "wolfsort",           "random 128-255", sizeof(int), cmp_int);
 	}
 
-	printf("\n");
+//	printf("\n");
 
 	if (max >= 512)
 	{
@@ -889,7 +909,7 @@ int main(int argc, char **argv)
 		test_sort(a_array, r_array, v_array, 256, 511, 500, 256, qsort,           "wolfsort",           "random 256-511", sizeof(int), cmp_int);
 	}
 
-	printf("\n");
+//	printf("\n");
 
 	if (max >= 1024)
 	{
@@ -911,7 +931,7 @@ int main(int argc, char **argv)
 		test_sort(a_array, r_array, v_array, 512, 1023, 50, 512, qsort,           "pdqsort",           "random 512-1023", sizeof(int), cmp_int);
 		test_sort(a_array, r_array, v_array, 512, 1023, 50, 512, qsort,           "wolfsort",           "random 512-1023", sizeof(int), cmp_int);
 
-		printf("\n");
+	//	printf("\n");
 
 		seed_rand(rnd);
 
@@ -931,7 +951,7 @@ int main(int argc, char **argv)
 
 	}
 
-	printf("\n");
+//	printf("\n");
 
 	if (max >= 2048)
 	{
@@ -954,7 +974,7 @@ int main(int argc, char **argv)
 		test_sort(a_array, r_array, v_array, 1024, 2047, 50, 1024, qsort,           "wolfsort",           "random 1024-2047", sizeof(int), cmp_int);
 	}
 
-	printf("\n");
+//	printf("\n");
 
 	if (max >= 4096)
 	{
@@ -977,7 +997,7 @@ int main(int argc, char **argv)
 		test_sort(a_array, r_array, v_array, 2048, 4095, 20, 2048, qsort,           "wolfsort",           "random 2048-4095", sizeof(int), cmp_int);
 	}
 
-	printf("\n");
+//	printf("\n");
 
 	free(la_array);
 	free(lr_array);

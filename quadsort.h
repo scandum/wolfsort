@@ -551,8 +551,9 @@ void tail_swap32(int *array, size_t nmemb, CMPFUNC *ignore)
 
 void tail_merge32(int *array, int *swap, size_t nmemb, size_t block, CMPFUNC *ignore);
 
-size_t quad_swap32(int *array, int *swap, size_t nmemb, CMPFUNC *ignore)
+size_t quad_swap32(int *array, size_t nmemb, CMPFUNC *ignore)
 {
+	int swap[16];
 	size_t offset;
 	register int *pta, *pts, *ptt, *pte, tmp;
 
@@ -584,28 +585,30 @@ size_t quad_swap32(int *array, int *swap, size_t nmemb, CMPFUNC *ignore)
 
 		if (cmp(&pta[1], &pta[2]) > 0)
 		{
+			tmp = pta[1];
+
 			if (cmp(&pta[0], &pta[2]) <= 0)
 			{
 				if (cmp(&pta[1], &pta[3]) <= 0)
 				{
-					tmp = pta[1]; pta[1] = pta[2]; pta[2] = tmp;
+					pta[1] = pta[2]; pta[2] = tmp;
 				}
 				else
 				{
-					tmp = pta[1]; pta[1] = pta[2]; pta[2] = pta[3]; pta[3] = tmp;
+					pta[1] = pta[2]; pta[2] = pta[3]; pta[3] = tmp;
 				}
 			}
 			else if (cmp(&pta[0], &pta[3]) > 0)
 			{
-				tmp = pta[0]; pta[0] = pta[2]; pta[2] = tmp; tmp = pta[1]; pta[1] = pta[3]; pta[3] = tmp;
+				pta[1] = pta[3]; pta[3] = tmp; tmp = pta[0]; pta[0] = pta[2]; pta[2] = tmp;
 			}
 			else if (cmp(&pta[1], &pta[3]) <= 0)
 			{
-				tmp = pta[0]; pta[0] = pta[2]; pta[2] = pta[1]; pta[1] = tmp;
+				pta[1] = pta[0]; pta[0] = pta[2]; pta[2] = tmp;
 			}
 			else
 			{
-				tmp = pta[0]; pta[0] = pta[2]; pta[2] = pta[3]; pta[3] = pta[1]; pta[1] = tmp;
+				pta[1] = pta[0]; pta[0] = pta[2]; pta[2] = pta[3]; pta[3] = tmp;
 			}
 		}
 		pta += 4;
@@ -1863,8 +1866,9 @@ void tail_swap64(long long *array, size_t nmemb, CMPFUNC *ignore)
 
 void tail_merge64(long long *array, long long *swap, const size_t nmemb, size_t block, CMPFUNC *ignore);
 
-size_t quad_swap64(long long *array, long long *swap, size_t nmemb, CMPFUNC *ignore)
+size_t quad_swap64(long long *array, size_t nmemb, CMPFUNC *ignore)
 {
+	long long swap[16];
 	size_t offset;
 	register long long *pta, *pts, *ptt, *pte, tmp;
 
@@ -2674,32 +2678,29 @@ void quadsort(void *array, size_t nmemb, size_t size, CMPFUNC *ignore)
 		}
 		else if (nmemb < 128)
 		{
-			int *swap = malloc(8 * size + nmemb * size);
-
-			if (quad_swap32(array, swap, nmemb, NULL) == 0)
+			if (quad_swap32(array, nmemb, NULL) == 0)
 			{
+				int swap[64];
 				tail_merge32(array, swap, nmemb, 16, NULL);
 			}
-			free(swap);
 		}
 		else
 		{
-		
-			int *swap = malloc(nmemb * size / 2);
-
-			if (swap == NULL)
+			if (quad_swap32(array, nmemb, NULL) == 0)
 			{
-				fprintf(stderr, "quadsort(%p,%zu,%zu,%p): malloc() failed: %s\n", array, nmemb, size, NULL, strerror(errno));
+				int *swap = malloc(nmemb * size / 2);
 
-				return;
-			}
+				if (swap == NULL)
+				{
+					fprintf(stderr, "quadsort(%p,%zu,%zu,%p): malloc() failed: %s\n", array, nmemb, size, NULL, strerror(errno));
 
-			if (quad_swap32(array, swap, nmemb, NULL) == 0)
-			{
+					return;
+				}
+
 				quad_merge32(array, swap, nmemb, 16, NULL);
-			}
 
-			free(swap);
+				free(swap);
+			}
 		}
 	}
 	else if (size == sizeof(long long))
@@ -2710,32 +2711,28 @@ void quadsort(void *array, size_t nmemb, size_t size, CMPFUNC *ignore)
 		}
 		else if (nmemb < 128)
 		{
-			long long *swap = malloc(8 * size + nmemb * size / 2);
-
-			if (quad_swap64(array, swap, nmemb, NULL) == 0)
+			if (quad_swap64(array, nmemb, NULL) == 0)
 			{
+				long long swap[64];
 				tail_merge64(array, swap, nmemb, 16, NULL);
 			}
-			free(swap);
 		}
 		else
 		{
-		
-			long long *swap = malloc(nmemb * size / 2);
-
-			if (swap == NULL)
+			if (quad_swap64(array, nmemb, NULL) == 0)
 			{
-				fprintf(stderr, "quadsort(%p,%zu,%zu,%p): malloc() failed: %s\n", array, nmemb, size, NULL, strerror(errno));
+				long long *swap = malloc(nmemb * size / 2);
 
-				return;
-			}
+				if (swap == NULL)
+				{
+					fprintf(stderr, "quadsort(%p,%zu,%zu,%p): malloc() failed: %s\n", array, nmemb, size, NULL, strerror(errno));
 
-			if (quad_swap64(array, swap, nmemb, NULL) == 0)
-			{
+					return;
+				}
 				quad_merge64(array, swap, nmemb, 16, NULL);
-			}
 
-			free(swap);
+				free(swap);
+			}
 		}
 	}
 	else
