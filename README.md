@@ -67,6 +67,16 @@ The following benchmark was on WSL gcc version 7.4.0 (Ubuntu 7.4.0-1ubuntu1~18.0
 The source code was compiled using g++ -O3 -fpermissive bench.c.
 Each test was ran 100 times and only the best run is reported.
 
+Benchmark: quadsort vs std::stable_sort vs timsort vs pdqsort vs wolfsort
+-------------------------------------------------------------------------
+The following benchmark was on WSL gcc version 7.4.0 (Ubuntu 7.4.0-1ubuntu1~18.04.1).
+The source code was compiled using g++ -O3 quadsort.cpp. Each test was ran 100 times
+and only the best run is reported.
+
+![Graph](/graph1.png)
+
+<details><summary><b>quadsort vs std::stable_sort vs timsort vs pdqsort vs wolfsort data table</b></summary>
+
 |      Name |    Items | Type |     Best |  Average | Comparisons |     Distribution |
 | --------- | -------- | ---- | -------- | -------- | ----------- | ---------------- |
 |  quadsort |  1000000 |  i32 | 0.070469 | 0.070635 |             |     random order |
@@ -122,9 +132,11 @@ Each test was ran 100 times and only the best run is reported.
 |   timsort |  1000000 |  i32 | 0.007994 | 0.008138 |             |       wave order |
 |   pdqsort |  1000000 |  i32 | 0.024683 | 0.024727 |             |       wave order |
 |  wolfsort |  1000000 |  i32 | 0.009642 | 0.009709 |             |       wave order |
-
+</details>
+It should be noted that pdqsort is not a stable sort which is the  reason it's faster on generic order data.
 
 ![Graph](/graph2.png)
+<details><summary><b>quadsort vs std::stable_sort vs timsort vs pdqsort vs wolfsort data table</b></summary>
 
 |      Name |    Items | Type |     Best |  Average | Comparisons |     Distribution |
 | --------- | -------- | ---- | -------- | -------- | ----------- | ---------------- |
@@ -163,3 +175,4 @@ Each test was ran 100 times and only the best run is reported.
 |   timsort |      675 |  i32 | 0.000896 | 0.000948 |             |     random order |
 |   pdqsort |      675 |  i32 | 0.000489 | 0.000531 |             |     random order |
 |  wolfsort |      675 |  i32 | 0.000283 | 0.000308 |             |     random order |
+</details>
