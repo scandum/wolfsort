@@ -2,8 +2,7 @@ Intro
 -----
 
 This document describes a stable adaptive hybrid radix / merge sort named wolfsort. It
-is likely the fastest sort written so far for sorting an even distribution of
-random and ordered data.
+is likely the fastest sort written so far for sorting a mixture of random and ordered data.
 
 Why a hybrid?
 -------------
@@ -14,8 +13,7 @@ sorted data. Wolfsort tries to avoid the worst case of each algorithm.
 Adaptive partitioning
 ---------------------
 Wolfsort uses [quadsort](https://github.com/scandum/quadsort "quadsort") as its adaptive merge
-sort, which is ultra fast, except for purely random arrays, for which it's only above averagely
-fast. The radix sort used by wolfsort has two primary functions.
+sort since it's faster than Timsort. The radix sort used by wolfsort has two primary functions.
 
 1. Detecting whether the array is worth partitioning with radix sort.
 2. Partition in a way that is beneficial to quadsort.
