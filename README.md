@@ -1,40 +1,40 @@
 Intro
 -----
 
-This document describes a stable adaptive hybrid radix / merge sort named wolfsort.
+This document describes a stable adaptive hybrid radix / merge sort named wolfsort. It
+is likely the fastest sort written so far for sorting a mixture of random and ordered data.
 
 Why a hybrid?
-------------------------
-While merge sort is very fast at sorting ordered data, its inability to effectively partition is its greatest weakness. Radix sort on the other hand is unable to take advantage of sorted data. Wolfsort tries to avoid the worst case of each algorithm.
+-------------
+While an adaptive merge sort is very fast at sorting ordered data, its inability to effectively
+partition is its greatest weakness. Radix sort on the other hand is unable to take advantage of
+sorted data. Wolfsort tries to avoid the worst case of each algorithm.
 
 Adaptive partitioning
 ---------------------
-Wolfsort uses [quadsort](https://github.com/scandum/quadsort "quadsort") as its merge sort, which is very fast, except for purely random arrays, the adaptive partitioning processes has two primary functions.
+Wolfsort uses [quadsort](https://github.com/scandum/quadsort "quadsort") as its adaptive merge
+sort since it's faster than Timsort. The radix sort used by wolfsort has two primary functions.
 
-1. Detecting whether the array is worth partitioning.
+1. Detecting whether the array is worth partitioning with radix sort.
 2. Partition in a way that is beneficial to quadsort.
 
 Detecting whether the array is worth partitioning
 -------------------------------------------------
 
-The default hash table size for 32 bit integers is 256 buckets. Each 32 bit integer is
-divided by 16777216. The maximum bucket size is 1/32nd of the array size.
+Wolfsort operates like a typical radix sort by creating 256 buckets and dividing each unsigned
+32 bit integer by 16777216. Without any optimizations this would multiply the memory overhead
+by 256 times. Being a hybrid sort wolfsort solves this problem by giving each bucket 1/8th of
+the maximum size.
 
-If the maximum bucket size is reached the partitioning process is cancelled and quadsort
-is ran instead. The maximum bucket size is reached in three cases: 
-
-1. Many values are under 256, in which case all the values gather in the first bucket.
-2. Many values are not random, in which case quadsort is likely to be faster.
-3. Many values are repetitions, in which case partitioning is inefficient.
-
-In all these cases quadsort is typically faster by itself while an aborted partitioning
-does not notably hamper performance.
+If the maximum bucket size is reached the radix sort is aborted and quadsort is ran instead.
+While this may seem wasteful it means in practice that the worst case of each algorithm is
+avoided at a relatively small cost.
 
 Partition in a way that is beneficial to merge sort
 ---------------------------------------------------
 Because this approach is the equivalent of an in-place MSD Radix sort the 256 buckets are
-in order once partitioning completes. The next step is to sort the content of each bucket,
-and wolfsort will be finished.
+in order once partitioning completes. The next step is to sort the content of each bucket
+usinge quadsort and wolfsort will be finished.
 
 Memory overhead
 ---------------
@@ -44,23 +44,42 @@ The sorting process that follows requires 1/32nd the array size in swap memory.
 If not enough memory is available wolfsort falls back on quadsort which requires 1/2 the array
 size in swap memory.
 
-While the memory overhead may seem like a bad thing, it can be considered a form of virtual quantum computing.
+In ideal conditions there is no computational difference between allocating and freeing 10 MB
+of memory and allocating and freeing 80 MB of memory. Historically software was always low on
+memory, and subsequently sorting algorithms were developed that bent over backwards in order
+to use as little additional memory as possible. Nowadays most modern systems have several
+gigabytes of memory that are not used and are just sitting idle. 
 
-In ideal conditions there is no computational difference between allocating and freeing 10 MB of memory and allocating and freeing 80 MB of memory. Historically software was always low on memory, and subsequently sorting algorithms were developed that bent over backwards in order to use as little additional memory as possible. Nowadays most modern systems have several gigabytes of memory that are not used and are just sitting idle. 
+During the partitioning process each bucket becomes akin to Schrödinger's cat, it may be used
+almost fully, not at all, or somewhere in between. Based on probability we know exactly 1/8th
+will be actually used. The only overhead is to keep track of the size of each bucket, and to
+check that the bucket is not overflowing upon each addition.
 
-Instead of dynamically allocating memory as needed, or performing complex swap operations, or even more complex stable swap operations, wolfsort goes ahead and allocates enough memory to grow freely in any direction.
+Proof of concept
+----------------
+Wolfsort is primarily a proof of concept, currently it only properly supports unsigned 32 bit integers.
 
-Normally if an implementation were to do this they would multiply the memory overhead by 256 times for 256 buckets. However, wolfsort is only looking to partition perfectly random distributions, and subsequently it can reduce the bucket size by 1/32th, and abort the partition process the moment a bucket becomes full.
-
-During the partitioning process each bucket becomes akin to Schrödinger's cat, it may be used almost fully, not at all, or somewhere in between. Based on probability we know exactly 1/8th will be actually used. The only overhead is to keep track of the size of each bucket, and to check that the bucket is not overflowing upon each addition.
-
-While more testing is needed it appears that in the 1K-100K element range wolfsort outperforms most sorting algorithms for random numbers, possibly turning spare memory into computing power.
+Memory allocation with malloc() is a bottleneck on many platforms. Using a better memory allocator
+or permanent swap memory is a possible solution. 
 
 Benchmark
 ---------
 The following benchmark was on WSL gcc version 7.4.0 (Ubuntu 7.4.0-1ubuntu1~18.04.1).
 The source code was compiled using g++ -O3 -fpermissive bench.c.
 Each test was ran 100 times and only the best run is reported.
+
+Benchmark: quadsort vs std::stable_sort vs timsort vs pdqsort vs wolfsort
+-------------------------------------------------------------------------
+The following benchmark was on WSL gcc version 7.4.0 (Ubuntu 7.4.0-1ubuntu1~18.04.1).
+The source code was compiled using g++ -O3 quadsort.cpp. Each test was ran 100 times
+and only the best run is reported. It should be noted that pdqsort is not a stable
+sort which is the reason it's faster on generic order data.
+
+The X axis of the bar graph below is the execution time.
+
+![Graph](/graph1.png)
+
+<details><summary><b>quadsort vs std::stable_sort vs timsort vs pdqsort vs wolfsort data table</b></summary>
 
 |      Name |    Items | Type |     Best |  Average | Comparisons |     Distribution |
 | --------- | -------- | ---- | -------- | -------- | ----------- | ---------------- |
@@ -117,9 +136,11 @@ Each test was ran 100 times and only the best run is reported.
 |   timsort |  1000000 |  i32 | 0.007994 | 0.008138 |             |       wave order |
 |   pdqsort |  1000000 |  i32 | 0.024683 | 0.024727 |             |       wave order |
 |  wolfsort |  1000000 |  i32 | 0.009642 | 0.009709 |             |       wave order |
+</details>
 
-
+The X axis of the graph below is the number of elements, the Y axis is the execution time.
 ![Graph](/graph2.png)
+<details><summary><b>quadsort vs std::stable_sort vs timsort vs pdqsort vs wolfsort data table</b></summary>
 
 |      Name |    Items | Type |     Best |  Average | Comparisons |     Distribution |
 | --------- | -------- | ---- | -------- | -------- | ----------- | ---------------- |
@@ -158,3 +179,4 @@ Each test was ran 100 times and only the best run is reported.
 |   timsort |      675 |  i32 | 0.000896 | 0.000948 |             |     random order |
 |   pdqsort |      675 |  i32 | 0.000489 | 0.000531 |             |     random order |
 |  wolfsort |      675 |  i32 | 0.000283 | 0.000308 |             |     random order |
+</details>
