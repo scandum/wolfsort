@@ -62,6 +62,11 @@ Wolfsort is primarily a proof of concept, currently it only properly supports un
 Memory allocation with malloc() is a bottleneck on many platforms. Using a better memory allocator
 or permanent swap memory is a possible solution. 
 
+Flowsort
+--------
+Flowsort is slightly slower than wolfsort but has 8 times less memory overhead. When sorting more
+than 1 million items it becomes slightly faster because it has better cache utilization.
+
 Benchmark
 ---------
 The following benchmark was on WSL gcc version 7.4.0 (Ubuntu 7.4.0-1ubuntu1~18.04.1).
