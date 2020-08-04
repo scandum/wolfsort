@@ -18,7 +18,7 @@
 */
 
 /*
-	flowsort 1.1.1
+	flowsort 1.1.2
 */
 
 #include <stdlib.h>
@@ -58,7 +58,7 @@ void flowsort(void *array, size_t nmemb, size_t size, CMPFUNC *ignore)
 				free(swap);
 			}
 		}
-		else if (nmemb < 512)
+		else if (nmemb < 768)
 		{
 			if (quad_swap32(array, nmemb, NULL) != nmemb)
 			{
@@ -72,22 +72,24 @@ void flowsort(void *array, size_t nmemb, size_t size, CMPFUNC *ignore)
 		else
 		{
 			int *swap, *pta, *pts;
-			unsigned int index, cnt, tmp, max, i, mid, *stack;
+			unsigned char *count;
+			unsigned int *stack1, *stack2, index, cnt, max;
 
-			unsigned int buckets = 256;
-			unsigned int moduler = 16777216;
+			unsigned int buckets = 512;
+			unsigned int moduler = 8388608;
 
-			while (moduler > 8096 && nmemb / buckets > 4)
+			while (moduler > 512 && nmemb / buckets > 4)
 			{
 				buckets *= 2;
 				moduler /= 2;
 			}
 
-			max = nmemb / (buckets / 8);
+			count = calloc(sizeof(char), buckets);
 
-			stack = calloc(size, buckets);
+			stack1 = malloc(sizeof(int) * buckets);
+			stack2 = malloc(sizeof(int) * buckets / 512);
 
-			swap = malloc(nmemb * size);
+			swap = malloc(size * nmemb);
 
 			if (swap)
 			{
@@ -97,198 +99,59 @@ void flowsort(void *array, size_t nmemb, size_t size, CMPFUNC *ignore)
 				{
 					index = (unsigned int) *pta++ / moduler;
 
-					if (++stack[index] == max)
+					if (++count[index] == 255)
 					{
 						if (quad_swap32(array, nmemb, NULL) == 0)
 						{
 							quad_merge32(array, swap, nmemb, 16, NULL);
 						}
 						free(swap);
-						free(stack);
-						
+						free(stack1);
+						free(stack2);
+						free(count);
+
 						return;
 					}
 				}
 
-				cnt = mid = 0;
+				max = 0;
 
 				for (index = 0 ; index < buckets ; index++)
 				{
-					mid += stack[index];
+					stack1[index] = max;
 
-					stack[index] = mid - stack[index];
+					if (index % 512 == 0)
+					{
+						stack2[index / 512] = max;
+					}
+					max += count[index];
 				}
 
 				pta = array;
 
 				for (cnt = 0 ; cnt < nmemb ; cnt++)
 				{
-					index = (unsigned int) *pta / moduler;
+					index = (unsigned int) *pta / moduler / 512;
 
-					swap[stack[index]++] = *pta++;
+					swap[stack2[index]++] = *pta++;
 				}
 
+				pts = swap;
 				pta = array;
-				max = 0;
+
+				for (cnt = 0 ; cnt < nmemb ; cnt++)
+				{
+					index = (unsigned int) *pts / moduler;
+
+					pta[stack1[index]++] = *pts++;
+				}
 
 				for (index = 0 ; index < buckets ; index++)
 				{
-					tmp = max;
-					max = stack[index];
-					cnt = stack[index] - tmp;
+					cnt = count[index];
 
 					if (cnt)
 					{
-						pts = swap + tmp;
-
-						switch (cnt)
-						{
-							case 1:
-								*pta++ = *pts;
-								continue;
-
-							case 2:
-								if (cmp(&pts[0], &pts[1]) > 0)
-								{
-									*pta++ = pts[1];
-									*pta++ = pts[0];
-									continue;
-								}
-								*pta++ = pts[0];
-								*pta++ = pts[1];
-								continue;
-
-							case 3:
-								if (cmp(&pts[0], &pts[1]) > 0)
-								{
-									if (cmp(&pts[1], &pts[2]) > 0)
-									{
-										*pta++ = pts[2]; *pta++ = pts[1]; *pta++ = pts[0];
-									}
-									else if (cmp(&pts[0], &pts[2]) > 0)
-									{
-										*pta++ = pts[1]; *pta++ = pts[2]; *pta++ = pts[0];
-									}
-									else
-									{
-										*pta++ = pts[1]; *pta++ = pts[0]; *pta++ = pts[2];
-									}
-								}
-								else if (cmp(&pts[1], &pts[2]) > 0)
-								{
-									if (cmp(&pts[0], &pts[2]) > 0)
-									{
-										*pta++ = pts[2]; *pta++ = pts[0]; *pta++ = pts[1];
-									}
-									else
-									{
-										*pta++ = pts[0]; *pta++ = pts[2]; *pta++ = pts[1];
-									}
-								}
-								else
-								{
-									*pta++ = pts[0]; *pta++ = pts[1]; *pta++ = pts[2];
-								}
-								continue;
-
-							case 4:
-							case 5:
-							case 6:
-							case 7:
-							case 8:
-							case 9:
-								if (cmp(&pts[0], &pts[1]) > 0)
-								{
-									pta[0] = pts[1]; pta[1] = pts[0];
-								}
-								else
-								{
-									pta[0] = pts[0]; pta[1] = pts[1];
-								}
-
-								if (cmp(&pts[2], &pts[3]) > 0)
-								{
-									pta[2] = pts[3]; pta[3] = pts[2];
-								}
-								else
-								{
-									pta[2] = pts[2]; pta[3] = pts[3];
-								}
-
-								if (cmp(&pta[1], &pta[2]) > 0)
-								{
-									if (cmp(&pta[0], &pta[2]) <= 0)
-									{
-										if (cmp(&pta[1], &pta[3]) <= 0)
-										{
-											*pts = pta[1]; pta[1] = pta[2]; pta[2] = *pts;
-										}
-										else
-										{
-											*pts = pta[1]; pta[1] = pta[2]; pta[2] = pta[3]; pta[3] = *pts;
-										}
-									}
-									else if (cmp(&pta[0], &pta[3]) > 0)
-									{
-										*pts = pta[0]; pta[0] = pta[2]; pta[2] = *pts; *pts = pta[1]; pta[1] = pta[3]; pta[3] = *pts;
-									}
-									else if (cmp(&pta[1], &pta[3]) <= 0)
-									{
-										*pts = pta[0]; pta[0] = pta[2]; pta[2] = pta[1]; pta[1] = *pts;
-									}
-									else
-									{
-										*pts = pta[0]; pta[0] = pta[2]; pta[2] = pta[3]; pta[3] = pta[1]; pta[1] = *pts;
-									}
-								}
-
-								for (cnt = 4 ; cnt < stack[index] - tmp ; cnt++)
-								{
-									if (cmp(&pta[cnt - 1], &pts[cnt]) > 0)
-									{
-										if (cmp(&pta[0], &pts[cnt]) > 0)
-										{
-											for (mid = cnt ; mid > 0 ; mid--)
-											{
-												pta[mid] = pta[mid - 1];
-											}
-							
-											pta[0] = pts[cnt];
-										}
-										else
-										{
-											pta[cnt] = pta[cnt - 1];
-
-											i = cnt - 2;
-
-											while (cmp(&pta[i], &pts[cnt]) > 0)
-											{
-												pta[i + 1] = pta[i];
-												i--;
-											}
-											pta[++i] = pts[cnt];
-										}
-									}
-									else
-									{
-										pta[cnt] = pts[cnt];
-									}
-								}
-								pta += cnt;
-								continue;
-
-						}
-
-						while (cnt--)
-						{
-							*pta++ = *pts++;
-						}
-
-						cnt = stack[index] - tmp;
-
-						pta -= cnt;
-						pts -= cnt;
-
 						if (cnt <= 16)
 						{
 							tail_swap32(pta, cnt, NULL);
@@ -297,14 +160,14 @@ void flowsort(void *array, size_t nmemb, size_t size, CMPFUNC *ignore)
 						{
 							if (quad_swap32(pta, cnt, NULL) == 0)
 							{
-								tail_merge32(pta, pts, cnt, 16, NULL);
+								tail_merge32(pta, swap, cnt, 16, NULL);
 							}
 						}
 						else
 						{
 							if (quad_swap32(pta, cnt, NULL) == 0)
 							{
-								quad_merge32(pta, pts, cnt, 16, NULL);
+								quad_merge32(pta, swap, cnt, 16, NULL);
 							}
 						}
 						pta += cnt;
@@ -313,22 +176,13 @@ void flowsort(void *array, size_t nmemb, size_t size, CMPFUNC *ignore)
 			}
 			else
 			{
-				swap = malloc(size * nmemb / 2);
-
-				if (swap == NULL)
-				{
-					fprintf(stderr, "flowsort(%p,%zu,%zu): malloc() failed: %s\n", array, nmemb, size, strerror(errno));
-				}
-				else
-				{
-					if (quad_swap32(array, nmemb, NULL) == 0)
-					{
-						quad_merge32(array, swap, nmemb, 16, NULL);
-					}
-				}
+				fprintf(stderr, "flowsort(%p,%zu,%zu): malloc() failed: %s\n", array, nmemb, size, strerror(errno));
 			}
 			free(swap);
-			free(stack);
+			free(stack1);
+			free(stack2);
+			free(count);
+
 			return;
 		}
 	}
@@ -360,22 +214,24 @@ void flowsort(void *array, size_t nmemb, size_t size, CMPFUNC *ignore)
 		else
 		{
 			long long *swap, *pta, *pts;
-			unsigned int index, cnt, tmp, max, i, mid, *stack;
+			unsigned int *stack1, *stack2, index, cnt, max;
+			unsigned char *count;
 
-			unsigned int buckets = 256;
-			unsigned long long moduler = 72057594037927936ULL;
+			unsigned int buckets = 512;
+			unsigned long long moduler = 72057594037927936ULL / 4ULL;
 
-			while (moduler > 4294967296ULL && nmemb / buckets > 6)
+			while (moduler > 512 && nmemb / buckets > 4)
 			{
 				buckets *= 2;
 				moduler /= 2;
 			}
 
-			max = nmemb / (buckets / 8);
+			count = calloc(sizeof(char), buckets);
 
-			stack = calloc(size, buckets);
+			stack1 = malloc(sizeof(long long) * buckets);
+			stack2 = malloc(sizeof(long long) * buckets / 512);
 
-			swap = malloc(nmemb * size);
+			swap = malloc(size * nmemb);
 
 			if (swap)
 			{
@@ -385,198 +241,59 @@ void flowsort(void *array, size_t nmemb, size_t size, CMPFUNC *ignore)
 				{
 					index = (unsigned long long) *pta++ / moduler;
 
-					if (++stack[index] == max)
+					if (++count[index] == 255)
 					{
-						if (quad_swap64(array, nmemb, NULL) == 0)
+						if (quad_swap32(array, nmemb, NULL) == 0)
 						{
 							quad_merge64(array, swap, nmemb, 16, NULL);
 						}
 						free(swap);
-						free(stack);
-						
+						free(stack1);
+						free(stack2);
+						free(count);
+
 						return;
 					}
 				}
 
-				mid = 0;
+				max = 0;
 
 				for (index = 0 ; index < buckets ; index++)
 				{
-					mid += stack[index];
+					stack1[index] = max;
 
-					stack[index] = mid - stack[index];
+					if (index % 512 == 0)
+					{
+						stack2[index / 512] = max;
+					}
+					max += count[index];
 				}
 
 				pta = array;
 
 				for (cnt = 0 ; cnt < nmemb ; cnt++)
 				{
-					index = (unsigned long long) *pta / moduler;
+					index = (unsigned long long) *pta / moduler / 512;
 
-					swap[stack[index]++] = *pta++;
+					swap[stack2[index]++] = *pta++;
 				}
 
+				pts = swap;
 				pta = array;
-				max = 0;
+
+				for (cnt = 0 ; cnt < nmemb ; cnt++)
+				{
+					index = (unsigned long long) *pts / moduler;
+
+					pta[stack1[index]++] = *pts++;
+				}
 
 				for (index = 0 ; index < buckets ; index++)
 				{
-					tmp = max;
-					max = stack[index];
-
-					cnt = stack[index] - tmp;
+					cnt = count[index];
 
 					if (cnt)
 					{
-						pts = swap + tmp;
-
-						switch (cnt)
-						{
-							case 1:
-								*pta++ = *pts;
-								continue;
-
-							case 2:
-								if (cmp(&pts[0], &pts[1]) > 0)
-								{
-									*pta++ = pts[1];
-									*pta++ = pts[0];
-									continue;
-								}
-								*pta++ = pts[0];
-								*pta++ = pts[1];
-								continue;
-
-							case 3:
-								if (cmp(&pts[0], &pts[1]) > 0)
-								{
-									if (cmp(&pts[1], &pts[2]) > 0)
-									{
-										*pta++ = pts[2]; *pta++ = pts[1]; *pta++ = pts[0];
-									}
-									else if (cmp(&pts[0], &pts[2]) > 0)
-									{
-										*pta++ = pts[1]; *pta++ = pts[2]; *pta++ = pts[0];
-									}
-									else
-									{
-										*pta++ = pts[1]; *pta++ = pts[0]; *pta++ = pts[2];
-									}
-								}
-								else if (cmp(&pts[1], &pts[2]) > 0)
-								{
-									if (cmp(&pts[0], &pts[2]) > 0)
-									{
-										*pta++ = pts[2]; *pta++ = pts[0]; *pta++ = pts[1];
-									}
-									else
-									{
-										*pta++ = pts[0]; *pta++ = pts[2]; *pta++ = pts[1];
-									}
-								}
-								else
-								{
-									*pta++ = pts[0]; *pta++ = pts[1]; *pta++ = pts[2];
-								}
-								continue;
-
-							case 4:
-							case 5:
-							case 6:
-							case 7:
-							case 8:
-							case 9:
-								if (cmp(&pts[0], &pts[1]) > 0)
-								{
-									pta[0] = pts[1]; pta[1] = pts[0];
-								}
-								else
-								{
-									pta[0] = pts[0]; pta[1] = pts[1];
-								}
-
-								if (cmp(&pts[2], &pts[3]) > 0)
-								{
-									pta[2] = pts[3]; pta[3] = pts[2];
-								}
-								else
-								{
-									pta[2] = pts[2]; pta[3] = pts[3];
-								}
-
-								if (cmp(&pta[1], &pta[2]) > 0)
-								{
-									if (cmp(&pta[0], &pta[2]) <= 0)
-									{
-										if (cmp(&pta[1], &pta[3]) <= 0)
-										{
-											*pts = pta[1]; pta[1] = pta[2]; pta[2] = *pts;
-										}
-										else
-										{
-											*pts = pta[1]; pta[1] = pta[2]; pta[2] = pta[3]; pta[3] = *pts;
-										}
-									}
-									else if (cmp(&pta[0], &pta[3]) > 0)
-									{
-										*pts = pta[0]; pta[0] = pta[2]; pta[2] = *pts; *pts = pta[1]; pta[1] = pta[3]; pta[3] = *pts;
-									}
-									else if (cmp(&pta[1], &pta[3]) <= 0)
-									{
-										*pts = pta[0]; pta[0] = pta[2]; pta[2] = pta[1]; pta[1] = *pts;
-									}
-									else
-									{
-										*pts = pta[0]; pta[0] = pta[2]; pta[2] = pta[3]; pta[3] = pta[1]; pta[1] = *pts;
-									}
-								}
-
-								for (cnt = 4 ; cnt < stack[index] - tmp ; cnt++)
-								{
-									if (cmp(&pta[cnt - 1], &pts[cnt]) > 0)
-									{
-										if (cmp(&pta[0], &pts[cnt]) > 0)
-										{
-											for (mid = cnt ; mid > 0 ; mid--)
-											{
-												pta[mid] = pta[mid - 1];
-											}
-							
-											pta[0] = pts[cnt];
-										}
-										else
-										{
-											pta[cnt] = pta[cnt - 1];
-
-											i = cnt - 2;
-
-											while (cmp(&pta[i], &pts[cnt]) > 0)
-											{
-												pta[i + 1] = pta[i];
-												i--;
-											}
-											pta[++i] = pts[cnt];
-										}
-									}
-									else
-									{
-										pta[cnt] = pts[cnt];
-									}
-								}
-								pta += cnt;
-								continue;
-						}
-
-						while (cnt--)
-						{
-							*pta++ = *pts++;
-						}
-
-						cnt = stack[index] - tmp;
-
-						pta -= cnt;
-						pts -= cnt;
-
 						if (cnt <= 16)
 						{
 							tail_swap64(pta, cnt, NULL);
@@ -585,14 +302,14 @@ void flowsort(void *array, size_t nmemb, size_t size, CMPFUNC *ignore)
 						{
 							if (quad_swap64(pta, cnt, NULL) == 0)
 							{
-								tail_merge64(pta, pts, cnt, 16, NULL);
+								tail_merge64(pta, swap, cnt, 16, NULL);
 							}
 						}
 						else
 						{
 							if (quad_swap64(pta, cnt, NULL) == 0)
 							{
-								quad_merge64(pta, pts, cnt, 16, NULL);
+								quad_merge64(pta, swap, cnt, 16, NULL);
 							}
 						}
 						pta += cnt;
@@ -601,22 +318,13 @@ void flowsort(void *array, size_t nmemb, size_t size, CMPFUNC *ignore)
 			}
 			else
 			{
-				swap = malloc(size * nmemb / 2);
-
-				if (swap == NULL)
-				{
-					fprintf(stderr, "flowsort(%p,%zu,%zu): malloc() failed: %s\n", array, nmemb, size, strerror(errno));
-				}
-				else
-				{
-					if (quad_swap64(array, nmemb, NULL) == 0)
-					{
-						quad_merge64(array, swap, nmemb, 16, NULL);
-					}
-				}
+				fprintf(stderr, "flowsort(%p,%zu,%zu): malloc() failed: %s\n", array, nmemb, size, strerror(errno));
 			}
 			free(swap);
-			free(stack);
+			free(stack1);
+			free(stack2);
+			free(count);
+
 			return;
 		}
 	}
