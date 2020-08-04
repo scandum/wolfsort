@@ -2,7 +2,8 @@ Intro
 -----
 
 This document describes a stable adaptive hybrid radix / merge sort named wolfsort. It
-is likely the fastest sort written so far for sorting a mixture of random and ordered data.
+is likely the fastest sort written so far for sorting a mixture of random and ordered data
+in a stable manner.
 
 Why a hybrid?
 -------------
@@ -57,15 +58,16 @@ check that the bucket is not overflowing upon each addition.
 
 Proof of concept
 ----------------
-Wolfsort is primarily a proof of concept, currently it only properly supports unsigned 32 bit integers.
+Wolfsort is primarily a proof of concept, currently it only properly supports unsigned 32 and
+64 bit integers.
 
-Memory allocation with malloc() is a bottleneck on many platforms. Using a better memory allocator
-or permanent swap memory is a possible solution. 
+Memory allocation with malloc() is a bottleneck on many platforms. Using a better memory
+allocator or permanent swap memory is a possible solution. 
 
 Flowsort
 --------
-Flowsort is slightly slower than wolfsort but has 8 times less memory overhead. When sorting more
-than 1 million items it becomes slightly faster because it has better cache utilization.
+Flowsort is similar to wolfsort but has some optimizations to reduce the memory overhead by
+8 times. While slower below 1 million items it becomes faster above.
 
 Benchmark
 ---------
