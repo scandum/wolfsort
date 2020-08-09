@@ -35,7 +35,7 @@ Partition in a way that is beneficial to merge sort
 ---------------------------------------------------
 Because this approach is the equivalent of an in-place MSD Radix sort the 256 buckets are
 in order once partitioning completes. The next step is to sort the content of each bucket
-usinge quadsort and wolfsort will be finished.
+using quadsort and wolfsort will be finished.
 
 Memory overhead
 ---------------
