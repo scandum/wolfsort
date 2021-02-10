@@ -65,7 +65,7 @@ Fluxsort uses a pivot table to partition. It somewhat resembles wolfsort but it 
 
 Big O
 -----
-```
+```cobol
                  ┌───────────────────────┐┌───────────────────────┐
                  │comparisons            ││swap memory            │
 ┌───────────────┐├───────┬───────┬───────┤├───────┬───────┬───────┤┌──────┐┌─────────┐┌─────────┐
