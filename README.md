@@ -69,17 +69,11 @@ Flowsort
 Flowsort is similar to wolfsort but has some optimizations to reduce the memory overhead by
 8 times. While slower below 1 million items it becomes faster above.
 
-Benchmark
----------
+Benchmarks
+----------
 The following benchmark was on WSL gcc version 7.4.0 (Ubuntu 7.4.0-1ubuntu1~18.04.1).
 The source code was compiled using g++ -O3 -fpermissive bench.c.
 Each test was ran 100 times and only the best run is reported.
-
-Benchmark: quadsort vs std::sort vs timsort vs gridsort vs wolfsort
--------------------------------------------------------------------
-The following benchmark was on WSL gcc version 7.4.0 (Ubuntu 7.4.0-1ubuntu1~18.04.1).
-The source code was compiled using g++ -O3 -w -fpermissive bench.c. Each test was ran 100 times
-and only the best run is reported.
 
 ![Graph](/graph1.png)
 
@@ -152,7 +146,7 @@ and only the best run is reported.
 </details>
 
 ![Graph](/graph2.png)
-<details><summary><b>quadsort vs std::stable_sort vs timsort vs pdqsort vs wolfsort data table</b></summary>
+<details><summary><b>data table</b></summary>
 
 |      Name |    Items | Type |     Best |  Average |     Loops | Samples |     Distribution |
 | --------- | -------- | ---- | -------- | -------- | --------- | ------- | ---------------- |
