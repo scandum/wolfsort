@@ -93,7 +93,7 @@ Benchmarks
 ----------
 The following benchmark was on WSL gcc version 7.4.0 (Ubuntu 7.4.0-1ubuntu1~18.04.1).
 The source code was compiled using g++ -O3 -fpermissive bench.c.
-Each test was ran 100 times and only the best run is reported.
+Each test was ran 10 times with the best run and average reported.
 
 ![Graph](/graph1.png)
 
@@ -169,6 +169,8 @@ Each test was ran 100 times and only the best run is reported.
 ![Graph](/graph2.png)
 <details><summary><b>data table</b></summary>
 
+|      Name |    Items | Type |     Best |  Average |     Loops | Samples |     Distribution |
+| --------- | -------- | ---- | -------- | -------- | --------- | ------- | ---------------- |
 | std::sort |       16 |   32 | 0.000824 | 0.001007 |     16384 |     100 |        random 16 |
 |  gridsort |       16 |   32 | 0.000680 | 0.000684 |     16384 |     100 |        random 16 |
 |   timsort |       16 |   32 | 0.001456 | 0.001688 |     16384 |     100 |        random 16 |
