@@ -192,10 +192,13 @@ void tail_swap32_cpy(int *dest, int *array, unsigned char nmemb, CMPFUNC *ignore
 		case 3:
 			tail_swap_three_cpy(dest, array, swap);
 			return;
+		case 4:
+			tail_swap_four_cpy(dest, array, swap);
+			return;
 	}
-	tail_swap_three_cpy(dest, array, swap);
+	tail_swap_four_cpy(dest, array, swap);
 
-	for (cnt = 3 ; cnt < nmemb ; cnt++)
+	for (cnt = 4 ; cnt < nmemb ; cnt++)
 	{
 		guarded_insert32_cpy(dest, array[cnt], cnt, ignore);
 	}
@@ -275,43 +278,30 @@ void tail_merge32_cpy(int *dest, int *array, size_t nmemb, size_t block, CMPFUNC
 // └────────────────────────────────────────────────┘//
 ///////////////////////////////////////////////////////
 
-
-void tail_insert64_cpy(long long *array, long long key, unsigned char nmemb, CMPFUNC *ignore)
+void guarded_insert64_cpy(long long *array, long long key, unsigned char nmemb, CMPFUNC *ignore)
 {
-	long long *pta = array + nmemb - 1;
+	long long *pta, *tpa;
+	unsigned char top;
 
-	if (nmemb > 4 && cmp(pta - 4, &key) > 0)
-	{
-		array[nmemb--] = *pta--;
-		array[nmemb--] = *pta--;
-		array[nmemb--] = *pta--;
-		array[nmemb--] = *pta--;
-	}
+	pta = array + nmemb;
+	tpa = pta--;
 
-	if (nmemb > 2 && cmp(pta - 2, &key) > 0)
+	while (nmemb--)
 	{
-		array[nmemb--] = *pta--;
-		array[nmemb--] = *pta--;
+		if (cmp(pta, &key) <= 0)
+		{
+			break;
+		}
+		*tpa-- = *pta--;
 	}
-
-	if (nmemb > 1 && cmp(pta - 1, &key) > 0)
-	{
-		array[nmemb--] = *pta--;
-	}
-
-	if (nmemb > 0 && cmp(pta, &key) > 0)
-	{
-		array[nmemb--] = *pta--;
-	}
-	array[nmemb] = key;
+	*tpa = key;
 }
+
 
 void tail_swap64_cpy(long long *dest, long long *array, unsigned char nmemb, CMPFUNC *ignore)
 {
-	long long pts[8];
-	register const long long *pta = array;
-	register long long *ptd = dest;
-	register unsigned char i, mid, cnt;
+	long long swap;
+	register unsigned char cnt;
 
 	switch (nmemb)
 	{
@@ -321,141 +311,23 @@ void tail_swap64_cpy(long long *dest, long long *array, unsigned char nmemb, CMP
 			*dest = *array;
 			return;
 		case 2:
-			tail_swap_two_cpy(ptd, pta, pts);
+			tail_swap_two_cpy(dest, array, swap);
 			return;
 		case 3:
-			tail_swap_three_cpy(ptd, pta, pts);
+			tail_swap_three_cpy(dest, array, swap);
 			return;
 		case 4:
-			tail_swap_four_cpy(ptd, pta, pts);
+			tail_swap_four_cpy(dest, array, swap);
 			return;
 	}
+	tail_swap_four_cpy(dest, array, swap);
 
-	tail_swap_four_cpy(ptd, pta, pts);
-
-	if (nmemb < 9)
+	for (cnt = 4 ; cnt < nmemb ; cnt++)
 	{
-		for (cnt = 4 ; cnt < nmemb ; cnt++)
-		{
-			tail_insert64_cpy(dest, pta[cnt], cnt, ignore);
-		}
-		return;
+		guarded_insert64_cpy(dest, array[cnt], cnt, ignore);
 	}
-
-	pta += 4;
-	ptd += 4;
-
-	tail_swap_four_cpy(ptd, pta, pts);
-
-	pta += 4;
-	ptd += 4;
-
-	switch (nmemb)
-	{
-		case 9:
-			ptd[0] = pta[0];
-			break;
-
-		case 10:
-			tail_swap_two_cpy(ptd, pta, pts);
-			break;
-
-		case 11:
-			tail_swap_three_cpy(ptd, pta, pts);
-			break;
-
-		default:
-			tail_swap_four_cpy(ptd, pta, pts);
-
-			for (cnt = 4 ; cnt + 8 < nmemb ; cnt++)
-			{
-				tail_insert64_cpy(ptd, pta[cnt], cnt, ignore);
-			}
-			break;
-	}
-	ptd -= 8;
-
-	// step 3
-
-	if (cmp(&ptd[3], &ptd[4]) <= 0)
-	{
-		if (cmp(&ptd[7], &ptd[8]) <= 0)
-		{
-			return;
-		}
-		for (i = 0 ; i < 8 ; i++)
-		{
-			pts[i] = ptd[i];
-		}
-	}
-	else if (cmp(&ptd[0], &ptd[7]) > 0)
-	{
-		pts[0] = ptd[4];
-		pts[1] = ptd[5];
-		pts[2] = ptd[6];
-		pts[3] = ptd[7];
-
-		pts[4] = ptd[0];
-		pts[5] = ptd[1];
-		pts[6] = ptd[2];
-		pts[7] = ptd[3];
-	}
-	else
-	{
-		cnt = 0;
-		i = 0;
-		mid = 4;
-
-		pts[cnt++] = cmp(&ptd[i], &ptd[mid]) > 0 ? ptd[mid++] : ptd[i++];
-		pts[cnt++] = cmp(&ptd[i], &ptd[mid]) > 0 ? ptd[mid++] : ptd[i++];
-		pts[cnt++] = cmp(&ptd[i], &ptd[mid]) > 0 ? ptd[mid++] : ptd[i++];
-		pts[cnt++] = cmp(&ptd[i], &ptd[mid]) > 0 ? ptd[mid++] : ptd[i++];
-		pts[cnt++] = cmp(&ptd[i], &ptd[mid]) > 0 ? ptd[mid++] : ptd[i++];
-
-		while (i < 4 && mid < 8)
-		{
-			if (cmp(&ptd[i], &ptd[mid]) > 0)
-			{
-				pts[cnt++] = ptd[mid++];
-			}
-			else
-			{
-				pts[cnt++] = ptd[i++];
-			}
-		}
-		while (i < 4)
-		{
-			pts[cnt++] = ptd[i++];
-		}
-		while (mid < 8)
-		{
-			pts[cnt++] = ptd[mid++];
-		}
-	}
-
-	cnt = 0;
-	i = 0;
-	mid = 8;
-
-	ptd[cnt++] = cmp(&pts[i], &ptd[mid]) > 0 ? ptd[mid++] : pts[i++];
-
-	while (i < 8 && mid < nmemb)
-	{
-		if (cmp(&pts[i], &ptd[mid]) > 0)
-		{
-			ptd[cnt++] = ptd[mid++];
-		}
-		else
-		{
-			ptd[cnt++] = pts[i++];
-		}
-	}
-	while (i < 8)
-	{
-		ptd[cnt++] = pts[i++];
-	}
+	return;
 }
-
 
 void tail_merge64_cpy(long long *dest, long long *array, size_t nmemb, size_t block, CMPFUNC *ignore)
 {
