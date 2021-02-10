@@ -69,6 +69,40 @@ Flowsort
 Flowsort is similar to wolfsort but has some optimizations to reduce the memory overhead by
 8 times. While slower below 1 million items it becomes faster above.
 
+Gridsort
+--------
+Gridsort stores data in a 2 dimensional self balancing grid.
+
+Fluxsort
+--------
+Fluxsort uses a pivot table to partition. It somewhat resembles flowsort but it is a stable comparison sort.
+
+Big O
+-----
+                 ┌───────────────────────┐┌───────────────────────┐
+                 │comparisons            ││swap memory            │
+┌───────────────┐├───────┬───────┬───────┤├───────┬───────┬───────┤┌──────┐┌─────────┐┌─────────┐
+│name           ││min    │avg    │max    ││min    │avg    │max    ││stable││partition││adaptive │
+├───────────────┤├───────┼───────┼───────┤├───────┼───────┼───────┤├──────┤├─────────┤├─────────┤
+│gridsort       ││n      │n log n│n log n││n      │n      │n      ││yes   ││yes      ││yes      │
+├───────────────┤├───────┼───────┼───────┤├───────┼───────┼───────┤├──────┤├─────────┤├─────────┤
+│mergesort      ││n log n│n log n│n log n││n      │n      │n      ││yes   ││no       ││no       │
+├───────────────┤├───────┼───────┼───────┤├───────┼───────┼───────┤├──────┤├─────────┤├─────────┤
+│timsort        ││n      │n log n│n log n││n      │n      │n      ││yes   ││no       ││yes      │
+├───────────────┤├───────┼───────┼───────┤├───────┼───────┼───────┤├──────┤├─────────┤├─────────┤
+│quadsort       ││n      │n log n│n log n││1      │n      │n      ││yes   ││no       ││yes      │
+├───────────────┤├───────┼───────┼───────┤├───────┼───────┼───────┤├──────┤├─────────┤├─────────┤
+│quicksort      ││n      │n log n│n²     ││1      │1      │1      ││no    ││yes      ││no       │
+├───────────────┤├───────┼───────┼───────┤├───────┼───────┼───────┤├──────┤├─────────┤├─────────┤
+│introsort      ││n log n│n log n│n log n││1      │1      │1      ││no    ││yes      ││no       │
+├───────────────┤├───────┼───────┼───────┤├───────┼───────┼───────┤├──────┤├─────────┤├─────────┤
+│fluxsort       ││n log n│n log n│n log n││n      │n      │n      ││yes   ││yes      ││semi     │
+├───────────────┤├───────┼───────┼───────┤├───────┼───────┼───────┤├──────┤├─────────┤├─────────┤
+│flowsort       ││n      │n log n│n log n││n      │n      │n      ││yes   ││yes      ││semi     │
+├───────────────┤├───────┼───────┼───────┤├───────┼───────┼───────┤├──────┤├─────────┤├─────────┤
+│wolfsort       ││n      │n log n│n log n││n      │n      │n      ││yes   ││yes      ││semi     │
+└───────────────┘└───────┴───────┴───────┘└───────┴───────┴───────┘└──────┘└─────────┘└─────────┘
+
 Benchmarks
 ----------
 The following benchmark was on WSL gcc version 7.4.0 (Ubuntu 7.4.0-1ubuntu1~18.04.1).
