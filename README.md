@@ -57,36 +57,36 @@ and the same now.
 
 Gridsort
 --------
-Gridsort stores data in a 2 dimensional self balancing grid. It has good overall performance. 
+Gridsort is a stable comparison sort which stores data in a 2 dimensional self balancing grid. It has good overall performance. 
 
 Fluxsort
 --------
-Fluxsort uses a pivot table to partition. It somewhat resembles wolfsort but it is a comparison sort. It is faster than gridsort on random data but slower on ordered data.
+Fluxsort is a stable comparison sort which uses a pivot table to partition. It somewhat resembles wolfsort but it is not a radix sort. It is faster than gridsort on random data but slower on ordered data.
 
 Big O
 -----
 ```cobol
                  ┌───────────────────────┐┌───────────────────────┐
                  │comparisons            ││swap memory            │
-┌───────────────┐├───────┬───────┬───────┤├───────┬───────┬───────┤┌──────┐┌─────────┐┌─────────┐
-│name           ││min    │avg    │max    ││min    │avg    │max    ││stable││partition││adaptive │
-├───────────────┤├───────┼───────┼───────┤├───────┼───────┼───────┤├──────┤├─────────┤├─────────┤
-│gridsort       ││n      │n log n│n log n││n      │n      │n      ││yes   ││yes      ││yes      │
-├───────────────┤├───────┼───────┼───────┤├───────┼───────┼───────┤├──────┤├─────────┤├─────────┤
-│mergesort      ││n log n│n log n│n log n││n      │n      │n      ││yes   ││no       ││no       │
-├───────────────┤├───────┼───────┼───────┤├───────┼───────┼───────┤├──────┤├─────────┤├─────────┤
-│timsort        ││n      │n log n│n log n││n      │n      │n      ││yes   ││no       ││yes      │
-├───────────────┤├───────┼───────┼───────┤├───────┼───────┼───────┤├──────┤├─────────┤├─────────┤
-│quadsort       ││n      │n log n│n log n││1      │n      │n      ││yes   ││no       ││yes      │
-├───────────────┤├───────┼───────┼───────┤├───────┼───────┼───────┤├──────┤├─────────┤├─────────┤
-│quicksort      ││n      │n log n│n²     ││1      │1      │1      ││no    ││yes      ││no       │
-├───────────────┤├───────┼───────┼───────┤├───────┼───────┼───────┤├──────┤├─────────┤├─────────┤
-│introsort      ││n log n│n log n│n log n││1      │1      │1      ││no    ││yes      ││no       │
-├───────────────┤├───────┼───────┼───────┤├───────┼───────┼───────┤├──────┤├─────────┤├─────────┤
-│fluxsort       ││n log n│n log n│n log n││n      │n      │n      ││yes   ││yes      ││yes      │
-├───────────────┤├───────┼───────┼───────┤├───────┼───────┼───────┤├──────┤├─────────┤├─────────┤
-│wolfsort       ││n      │n log n│n log n││n      │n      │n      ││yes   ││yes      ││yes      │
-└───────────────┘└───────┴───────┴───────┘└───────┴───────┴───────┘└──────┘└─────────┘└─────────┘
+┌───────────────┐├───────┬───────┬───────┤├───────┬───────┬───────┤┌──────┐┌─────────┐┌─────────┐┌─────────┐
+│name           ││min    │avg    │max    ││min    │avg    │max    ││stable││partition││adaptive ││compares │
+├───────────────┤├───────┼───────┼───────┤├───────┼───────┼───────┤├──────┤├─────────┤├─────────┤├─────────┤
+│gridsort       ││n      │n log n│n log n││n      │n      │n      ││yes   ││yes      ││yes      ││yes      │
+├───────────────┤├───────┼───────┼───────┤├───────┼───────┼───────┤├──────┤├─────────┤├─────────┤├─────────┤
+│mergesort      ││n log n│n log n│n log n││n      │n      │n      ││yes   ││no       ││no       ││yes      │
+├───────────────┤├───────┼───────┼───────┤├───────┼───────┼───────┤├──────┤├─────────┤├─────────┤├─────────┤
+│timsort        ││n      │n log n│n log n││n      │n      │n      ││yes   ││no       ││yes      ││yes      │
+├───────────────┤├───────┼───────┼───────┤├───────┼───────┼───────┤├──────┤├─────────┤├─────────┤├─────────┤
+│quadsort       ││n      │n log n│n log n││1      │n      │n      ││yes   ││no       ││yes      ││yes      │
+├───────────────┤├───────┼───────┼───────┤├───────┼───────┼───────┤├──────┤├─────────┤├─────────┤├─────────┤
+│quicksort      ││n      │n log n│n²     ││1      │1      │1      ││no    ││yes      ││no       ││yes      │
+├───────────────┤├───────┼───────┼───────┤├───────┼───────┼───────┤├──────┤├─────────┤├─────────┤├─────────┤
+│introsort      ││n log n│n log n│n log n││1      │1      │1      ││no    ││yes      ││no       ││yes      │
+├───────────────┤├───────┼───────┼───────┤├───────┼───────┼───────┤├──────┤├─────────┤├─────────┤├─────────┤
+│fluxsort       ││n log n│n log n│n log n││n      │n      │n      ││yes   ││yes      ││yes      ││yes      │
+├───────────────┤├───────┼───────┼───────┤├───────┼───────┼───────┤├──────┤├─────────┤├─────────┤├─────────┤
+│wolfsort       ││n      │n log n│n log n││n      │n      │n      ││yes   ││yes      ││yes      ││no       │
+└───────────────┘└───────┴───────┴───────┘└───────┴───────┴───────┘└──────┘└─────────┘└─────────┘└─────────┘
 ```
 
 Benchmarks
