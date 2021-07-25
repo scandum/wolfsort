@@ -23,26 +23,169 @@
 	SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef GRIDSORT_H
-#define GRIDSORT_H
+/*
+	blitsort 1.1.4.3
+*/
+
+#ifndef BLITSORT_H
+#define BLITSORT_H
+
+// set to 0 for sqrt N cache size
+
+#define BLITCACHE 512
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
 #include <errno.h>
 
-#ifndef QUADSORT_H
-  #include "quadsort.h"
-#endif
+typedef int CMPFUNC (const void *a, const void *b);
 
 //#define cmp(a,b) (*(a) > *(b))
 
-typedef int CMPFUNC (const void *a, const void *b);
+#define swap_two(array, swap)  \
+{  \
+	if (cmp(array, array + 1) > 0)  \
+	{  \
+		swap = array[1]; array[1] = array[0]; array[0] = swap;  \
+	}  \
+}
 
-#define BSC_X 64
-#define BSC_Y 2
+#define swap_three(array, swap)  \
+{  \
+	if (cmp(array, array + 1) > 0)  \
+	{  \
+		if (cmp(array, array + 2) <= 0)  \
+		{  \
+			swap = array[0]; array[0] = array[1]; array[1] = swap;  \
+		}  \
+		else if (cmp(array + 1, array + 2) > 0)  \
+		{  \
+			swap = array[0]; array[0] = array[2]; array[2] = swap;  \
+		}  \
+		else  \
+		{  \
+			swap = array[0]; array[0] = array[1]; array[1] = array[2]; array[2] = swap;  \
+		}  \
+	}  \
+	else if (cmp(array + 1, array + 2) > 0)  \
+	{  \
+		if (cmp(array, array + 2) > 0)  \
+		{  \
+			swap = array[2]; array[2] = array[1]; array[1] = array[0]; array[0] = swap;  \
+		}  \
+		else   \
+		{  \
+			swap = array[2]; array[2] = array[1]; array[1] = swap;  \
+		}  \
+	}  \
+}  \
 
-size_t  BSC_Z;
+#define swap_four(array, swap)  \
+{  \
+	if (cmp(array, array + 1) > 0)  \
+	{  \
+		swap = array[0]; array[0] = array[1]; array[1] = swap;  \
+	}  \
+	if (cmp(array + 2, array + 3) > 0)  \
+	{  \
+		swap = array[2]; array[2] = array[3]; array[3] = swap;  \
+	}  \
+	if (cmp(array + 1, array + 2) > 0)  \
+	{  \
+		if (cmp(array, array + 2) <= 0)  \
+		{  \
+			if (cmp(array + 1, array + 3) <= 0)  \
+			{  \
+				swap = array[1]; array[1] = array[2]; array[2] = swap;  \
+			}  \
+			else  \
+			{  \
+				swap = array[1]; array[1] = array[2]; array[2] = array[3]; array[3] = swap;  \
+			}  \
+		}  \
+		else if (cmp(array, array + 3) > 0)  \
+		{  \
+			swap = array[1]; array[1] = array[3]; array[3] = swap;  \
+			swap = array[0]; array[0] = array[2]; array[2] = swap;  \
+		}  \
+		else if (cmp(array + 1, array + 3) <= 0)  \
+		{  \
+			swap = array[1]; array[1] = array[0]; array[0] = array[2]; array[2] = swap;  \
+		}  \
+		else  \
+		{  \
+			swap = array[1]; array[1] = array[0]; array[0] = array[2]; array[2] = array[3]; array[3] = swap;  \
+		}  \
+	}  \
+}
+
+#define tail_swap_eight(array, pta, ptt, end, key, cmp) \
+{ \
+	pta = end++; \
+	ptt = pta--; \
+ \
+	if (cmp(pta, ptt) > 0) \
+	{ \
+		key = *ptt; \
+		*ptt-- = *pta--; \
+ \
+		if (cmp(pta - 2, &key) > 0) \
+		{ \
+			*ptt-- = *pta--; *ptt-- = *pta--; *ptt-- = *pta--; \
+		} \
+		if (pta > array && cmp(pta - 1, &key) > 0) \
+		{ \
+			*ptt-- = *pta--; *ptt-- = *pta--; \
+		} \
+		if (pta >= array && cmp(pta, &key) > 0) \
+		{ \
+			*ptt-- = *pta; \
+		} \
+		*ptt = key; \
+	} \
+}
+
+#define swap_five(array, pta, ptt, end, key, cmp) \
+{ \
+	end = array + 3; \
+	pta = end++; \
+	ptt = end++; \
+ \
+	if (cmp(pta, ptt) > 0) \
+	{ \
+		key = *ptt; \
+		*ptt-- = *pta--; \
+ \
+		if (cmp(pta - 1, &key) > 0) \
+		{ \
+			*ptt-- = *pta--; *ptt-- = *pta--; \
+		} \
+		if (cmp(pta, &key) > 0) \
+		{ \
+			*ptt-- = *pta; \
+		} \
+		*ptt = key; \
+	} \
+}
+
+#define swap_six(array, pta, ptt, end, key, cmp) \
+{ \
+	swap_five(array, pta, ptt, end, key, cmp); \
+	tail_swap_eight(array, pta, ptt, end, key, cmp); \
+}
+
+#define swap_seven(array, pta, ptt, end, key, cmp) \
+{ \
+	swap_six(array, pta, ptt, end, key, cmp); \
+	tail_swap_eight(array, pta, ptt, end, key, cmp); \
+}
+
+#define swap_eight(array, pta, ptt, end, key, cmp) \
+{ \
+	swap_seven(array, pta, ptt, end, key, cmp); \
+	tail_swap_eight(array, pta, ptt, end, key, cmp); \
+}
 
 //////////////////////////////////////////////////////////
 //┌────────────────────────────────────────────────────┐//
@@ -63,7 +206,7 @@ size_t  BSC_Z;
 #define FUNC(NAME) NAME##8
 #define STRUCT(NAME) struct NAME##8
 
-#include "gridsort.c"
+#include "blitsort.c"
 
 //////////////////////////////////////////////////////////
 //┌────────────────────────────────────────────────────┐//
@@ -84,7 +227,7 @@ size_t  BSC_Z;
 #define FUNC(NAME) NAME##16
 #define STRUCT(NAME) struct NAME##16
 
-#include "gridsort.c"
+#include "blitsort.c"
 
 //////////////////////////////////////////////////////////
 // ┌───────────────────────────────────────────────────┐//
@@ -105,7 +248,7 @@ size_t  BSC_Z;
 #define FUNC(NAME) NAME##32
 #define STRUCT(NAME) struct NAME##32
 
-#include "gridsort.c"
+#include "blitsort.c"
 
 //////////////////////////////////////////////////////////
 // ┌───────────────────────────────────────────────────┐//
@@ -126,7 +269,7 @@ size_t  BSC_Z;
 #define FUNC(NAME) NAME##64
 #define STRUCT(NAME) struct NAME##64
 
-#include "gridsort.c"
+#include "blitsort.c"
 
 //////////////////////////////////////////////////////////
 //┌────────────────────────────────────────────────────┐//
@@ -147,50 +290,72 @@ size_t  BSC_Z;
 #define FUNC(NAME) NAME##128
 #define STRUCT(NAME) struct NAME##128
 
-#include "gridsort.c"
+#include "blitsort.c"
 
-/////////////////////////////////////////////////////////////////////////////
-//┌───────────────────────────────────────────────────────────────────────┐//
-//│    ██████┐ ██████┐ ██████┐██████┐ ███████┐ ██████┐ ██████┐ ████████┐  │//
-//│   ██┌────┘ ██┌──██┐└─██┌─┘██┌──██┐██┌────┘██┌───██┐██┌──██┐└──██┌──┘  │//
-//│   ██│  ███┐██████┌┘  ██│  ██│  ██│███████┐██│   ██│██████┌┘   ██│     │//
-//│   ██│   ██│██┌──██┐  ██│  ██│  ██│└────██│██│   ██│██┌──██┐   ██│     │//
-//│   └██████┌┘██│  ██│██████┐██████┌┘███████│└██████┌┘██│  ██│   ██│     │//
-//│    └─────┘ └─┘  └─┘└─────┘└─────┘ └──────┘ └─────┘ └─┘  └─┘   └─┘     │//
-//└───────────────────────────────────────────────────────────────────────┘//
-/////////////////////////////////////////////////////////////////////////////
-
-void gridsort(void *array, size_t nmemb, size_t size, CMPFUNC *cmp)
+/*
+struct size256
 {
-	if (nmemb < BSC_X * BSC_X)
+	int size256[8];
+};
+
+#undef VAR
+#undef FUNC
+#undef STRUCT
+
+#define VAR struct size256
+#define FUNC(NAME) NAME##256
+#define STRUCT(NAME) struct NAME##256
+
+#include "blitsort.c"
+*/
+
+//////////////////////////////////////////////////////////////////////////////
+//┌────────────────────────────────────────────────────────────────────────┐//
+//│   ██████┐ ██┐     ██████┐████████┐███████┐ ██████┐ ██████┐ ████████┐   │//
+//│   ██┌──██┐██│     └─██┌─┘└──██┌──┘██┌────┘██┌───██┐██┌──██┐└──██┌──┘   │//
+//│   ██████┌┘██│       ██│     ██│   ███████┐██│   ██│██████┌┘   ██│      │//
+//│   ██┌──██┐██│       ██│     ██│   └────██│██│   ██│██┌──██┐   ██│      │//
+//│   ██████┌┘███████┐██████┐   ██│   ███████│└██████┌┘██│  ██│   ██│      │//
+//│   └─────┘ └──────┘└─────┘   └─┘   └──────┘ └─────┘ └─┘  └─┘   └─┘      │//
+//└────────────────────────────────────────────────────────────────────────┘//
+//////////////////////////////////////////////////////////////////////////////
+
+void blitsort(void *array, size_t nmemb, size_t size, CMPFUNC *cmp)
+{
+	if (nmemb < 2)
 	{
-		return quadsort(array, nmemb, size, cmp);
+		return;
 	}
 
 	switch (size)
 	{
 		case sizeof(char):
-			return gridsort8(array, nmemb, size, cmp);
+			return blitsort8(array, nmemb, cmp);
 
 		case sizeof(short):
-			return gridsort16(array, nmemb, size, cmp);
+			return blitsort16(array, nmemb, cmp);
 
 		case sizeof(int):
-			return gridsort32(array, nmemb, size, cmp);
+			return blitsort32(array, nmemb, cmp);
 
 		case sizeof(long long):
-			return gridsort64(array, nmemb, size, cmp);
+			return blitsort64(array, nmemb, cmp);
 
 		case sizeof(long double):
-			return gridsort128(array, nmemb, size, cmp);
+			return blitsort128(array, nmemb, cmp);
+
+//		case sizeof(struct size256):
+//			return blitsort256(array, nmemb, cmp);
 
 		default:
-			assert(size == sizeof(char) || size == sizeof(short) || size == sizeof(int) || size == sizeof(long long) || size == sizeof(long double));
+			return assert(size == sizeof(char) || size == sizeof(short) || size == sizeof(int) || size == sizeof(long long) || size == sizeof(long double));
 	}
 }
 
 #undef VAR
 #undef FUNC
 #undef STRUCT
+
+#undef BLITCACHE
 
 #endif

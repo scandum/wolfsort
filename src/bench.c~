@@ -52,9 +52,9 @@
 #define cmp(a,b) (*(a) > *(b))
 
 #include "quadsort.h"
-#include "fluxsort.h"
 #include "wolfsort.h"
 #include "gridsort.h"
+#include "fluxsort.h"
 #include "blitsort.h"
 
 //#include "pdqsort.h" // https://github.com/orlp/pdqsort/blob/master/pdqsort.h

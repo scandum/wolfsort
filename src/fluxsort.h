@@ -24,7 +24,7 @@
 */
 
 /*
-	fluxsort 1.1.3.3
+	fluxsort 1.1.3.5
 */
 
 #ifndef FLUXSORT_H
@@ -35,334 +35,112 @@
 #include <assert.h>
 #include <errno.h>
 
-#define cmp(a,b) (*(a) > *(b))
-
 typedef int CMPFUNC (const void *a, const void *b);
 
-///////////////////////////////////////////////////////
-// ┌────────────────────────────────────────────────┐//
-// │   ██████┐ ██████┐    ██████┐ ██████┐████████┐  │//
-// │   └────██┐└────██┐   ██┌──██┐└─██┌─┘└──██┌──┘  │//
-// │    █████┌┘ █████┌┘   ██████┌┘  ██│     ██│     │//
-// │    └───██┐██┌───┘    ██┌──██┐  ██│     ██│     │//
-// │   ██████┌┘███████┐   ██████┌┘██████┐   ██│     │//
-// │   └─────┘ └──────┘   └─────┘ └─────┘   └─┘     │//
-// └────────────────────────────────────────────────┘//
-///////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////
+//┌────────────────────────────────────────────────────┐//
+//│                █████┐    ██████┐ ██████┐████████┐  │//
+//│               ██┌──██┐   ██┌──██┐└─██┌─┘└──██┌──┘  │//
+//│               └█████┌┘   ██████┌┘  ██│     ██│     │//
+//│               ██┌──██┐   ██┌──██┐  ██│     ██│     │//
+//│               └█████┌┘   ██████┌┘██████┐   ██│     │//
+//│                └────┘    └─────┘ └─────┘   └─┘     │//
+//└────────────────────────────────────────────────────┘//
+//////////////////////////////////////////////////////////
 
-#define PIVOTS 256
+#undef VAR
+#undef FUNC
+#undef STRUCT
 
-size_t run, last;
+#define VAR char
+#define FUNC(NAME) NAME##8
+#define STRUCT(NAME) struct NAME##8
 
-size_t flux_binary_search32(int *array, int key, CMPFUNC *cmp)
-{
-	size_t mid, top;
-	int *base = array;
+#include "fluxsort.c"
 
-	if (run == 0)
-	{
-		top = PIVOTS;
-	}
-	else
-	{
-		top = 1;
-		base += last;
+//////////////////////////////////////////////////////////
+//┌────────────────────────────────────────────────────┐//
+//│           ▄██┐   █████┐    ██████┐ ██████┐████████┐│//
+//│          ████│  ██┌───┘    ██┌──██┐└─██┌─┘└──██┌──┘│//
+//│          └─██│  ██████┐    ██████┌┘  ██│     ██│   │//
+//│            ██│  ██┌──██┐   ██┌──██┐  ██│     ██│   │//
+//│          ██████┐└█████┌┘   ██████┌┘██████┐   ██│   │//
+//│          └─────┘ └────┘    └─────┘ └─────┘   └─┘   │//
+//└────────────────────────────────────────────────────┘//
+//////////////////////////////////////////////////////////
 
-		if (cmp(base, &key) <= 0)
-		{
-			int *roof = array + PIVOTS;
-	
-			while (1)
-			{
-				if (base + top >= roof)
-				{
-					top = roof - base;
-					break;
-				}
-	
-				base += top;
-	
-				if (cmp(base, &key) > 0)
-				{
-					base -= top;
-					break;
-				}
-				top *= 2;
-			}
-		}
-		else
-		{
-			while (1)
-			{
-				if (base - top <= array)
-				{
-					top = base - array;
-					base = array;
-					break;
-				}
-	
-				base -= top;
-	
-				if (cmp(&key, base) > 0)
-				{
-					break;
-				}
-				top *= 2;
-			}
-		}
-	}
+#undef VAR
+#undef FUNC
+#undef STRUCT
 
-	while (top > 1)
-	{
-		mid = top / 2;
+#define VAR short
+#define FUNC(NAME) NAME##16
+#define STRUCT(NAME) struct NAME##16
 
-		if (cmp(base + mid, &key) <= 0)
-		{
-			base += mid;
-		}
-		top -= mid;
-	}
+#include "fluxsort.c"
 
-	top = base - array;
+//////////////////////////////////////////////////////////
+// ┌───────────────────────────────────────────────────┐//
+// │       ██████┐ ██████┐    ██████┐ ██████┐████████┐ │//
+// │       └────██┐└────██┐   ██┌──██┐└─██┌─┘└──██┌──┘ │//
+// │        █████┌┘ █████┌┘   ██████┌┘  ██│     ██│    │//
+// │        └───██┐██┌───┘    ██┌──██┐  ██│     ██│    │//
+// │       ██████┌┘███████┐   ██████┌┘██████┐   ██│    │//
+// │       └─────┘ └──────┘   └─────┘ └─────┘   └─┘    │//
+// └───────────────────────────────────────────────────┘//
+//////////////////////////////////////////////////////////
 
-	run = last == top;
+#undef VAR
+#undef FUNC
+#undef STRUCT
 
-	return last = top;
-}
+#define VAR int
+#define FUNC(NAME) NAME##32
+#define STRUCT(NAME) struct NAME##32
 
+#include "fluxsort.c"
 
-size_t flux_swap32(int *array, int *swap, unsigned char *hash, size_t nmemb, size_t stage, CMPFUNC *cmp)
-{
-	unsigned char *pth;
-	size_t cnt, size[PIVOTS] = { 0 };
-	int base[PIVOTS], *bptr[PIVOTS], *pta, *pte, *pts;
+//////////////////////////////////////////////////////////
+// ┌───────────────────────────────────────────────────┐//
+// │        █████┐ ██┐  ██┐   ██████┐ ██████┐████████┐ │//
+// │       ██┌───┘ ██│  ██│   ██┌──██┐└─██┌─┘└──██┌──┘ │//
+// │       ██████┐ ███████│   ██████┌┘  ██│     ██│    │//
+// │       ██┌──██┐└────██│   ██┌──██┐  ██│     ██│    │//
+// │       └█████┌┘     ██│   ██████┌┘██████┐   ██│    │//
+// │        └────┘      └─┘   └─────┘ └─────┘   └─┘    │//
+// └───────────────────────────────────────────────────┘//
+//////////////////////////////////////////////////////////
 
-	pte = array + nmemb;
+#undef VAR
+#undef FUNC
+#undef STRUCT
 
-	for (cnt = 0 ; cnt < PIVOTS ; cnt++)
-	{
-		base[cnt] = array[cnt * nmemb / PIVOTS];
-	}
+#define VAR long long
+#define FUNC(NAME) NAME##64
+#define STRUCT(NAME) struct NAME##64
 
-	quadsort(base, PIVOTS, sizeof(int), cmp);
+#include "fluxsort.c"
 
-	run = last = 0;
-	pth = hash;
+//////////////////////////////////////////////////////////
+//┌────────────────────────────────────────────────────┐//
+//│  ▄██┐  ██████┐  █████┐    ██████┐ ██████┐████████┐ │//
+//│ ████│  └────██┐██┌──██┐   ██┌──██┐└─██┌─┘└──██┌──┘ │//
+//│ └─██│   █████┌┘└█████┌┘   ██████┌┘  ██│     ██│    │//
+//│   ██│  ██┌───┘ ██┌──██┐   ██┌──██┐  ██│     ██│    │//
+//│ ██████┐███████┐└█████┌┘   ██████┌┘██████┐   ██│    │//
+//│ └─────┘└──────┘ └────┘    └─────┘ └─────┘   └─┘    │//
+//└────────────────────────────────────────────────────┘//
+//////////////////////////////////////////////////////////
 
-	for (pta = array ; pta < pte ; pta++)
-	{
-		size[*pth++ = flux_binary_search32(base, *pta, cmp)]++;
-	}
+#undef VAR
+#undef FUNC
+#undef STRUCT
 
-	pts = swap;
+#define VAR long double
+#define FUNC(NAME) NAME##128
+#define STRUCT(NAME) struct NAME##128
 
-	for (cnt = 0 ; cnt < PIVOTS ; cnt++)
-	{
-		bptr[cnt] = pts;
-
-		pts += size[cnt];
-	}
-
-	pth = hash;
-
-	for (pta = array ; pta < pte ; pta++)
-	{
-		*bptr[*pth++]++ = *pta;
-	}
-
-	pta = array;
-	pts = swap;
-	pth = hash;
-
-	for (cnt = 0 ; cnt < PIVOTS ; cnt++)
-	{
-		nmemb = size[cnt];
-
-		if (stage == 0)
-		{
-			if (nmemb < 1024)
-			{
-				memcpy(pta, pts, nmemb * sizeof(int));
-				quadsort_swap32(pta, pts, nmemb, sizeof(int), cmp);
-			}
-			else
-			{
-				flux_swap32(pts, pta, pth, nmemb, 1, cmp);
-			}
-		}
-		else
-		{
-			quadsort_swap32(pts, pta, nmemb, sizeof(int), cmp);
-		}
-		pta += nmemb;
-		pts += nmemb;
-		pth += nmemb;
-	}
-	return 1;
-}
-
-
-// This is a duplicate of the 32 bit version and the only difference is that
-// each instance of 'int' has been changed to 'long long'. It's a bit
-// unorthodox, but it does allow for string sorting on both 32 and 64 bit
-// systems with (hopefully) optimal optimization.
-
-///////////////////////////////////////////////////////
-// ┌────────────────────────────────────────────────┐//
-// │    █████┐ ██┐  ██┐   ██████┐ ██████┐████████┐  │//
-// │   ██┌───┘ ██│  ██│   ██┌──██┐└─██┌─┘└──██┌──┘  │//
-// │   ██████┐ ███████│   ██████┌┘  ██│     ██│     │//
-// │   ██┌──██┐└────██│   ██┌──██┐  ██│     ██│     │//
-// │   └█████┌┘     ██│   ██████┌┘██████┐   ██│     │//
-// │    └────┘      └─┘   └─────┘ └─────┘   └─┘     │//
-// └────────────────────────────────────────────────┘//
-///////////////////////////////////////////////////////
-
-size_t flux_binary_search64(long long *array, long long key, CMPFUNC *cmp)
-{
-	size_t mid, top;
-	long long *base = array;
-
-	if (run == 0)
-	{
-		top = PIVOTS;
-	}
-	else
-	{
-		top = 1;
-		base += last;
-
-		if (cmp(base, &key) <= 0)
-		{
-			long long *roof = array + PIVOTS;
-	
-			while (1)
-			{
-				if (base + top >= roof)
-				{
-					top = roof - base;
-					break;
-				}
-	
-				base += top;
-	
-				if (cmp(base, &key) > 0)
-				{
-					base -= top;
-					break;
-				}
-				top *= 2;
-			}
-		}
-		else
-		{
-			while (1)
-			{
-				if (base - top <= array)
-				{
-					top = base - array;
-					base = array;
-					break;
-				}
-	
-				base -= top;
-	
-				if (cmp(&key, base) > 0)
-				{
-					break;
-				}
-				top *= 2;
-			}
-		}
-	}
-
-	while (top > 1)
-	{
-		mid = top / 2;
-
-		if (cmp(base + mid, &key) <= 0)
-		{
-			base += mid;
-		}
-		top -= mid;
-	}
-
-	top = base - array;
-
-	run = last == top;
-
-	return last = top;
-}
-
-size_t flux_swap64(long long *array, long long *swap, unsigned char *hash, size_t nmemb, size_t stage, CMPFUNC *cmp)
-{
-	unsigned char *pth;
-	size_t cnt, size[PIVOTS] = { 0 };
-	long long base[PIVOTS], *bptr[PIVOTS], *pta, *pte, *pts;
-
-	pte = array + nmemb;
-
-	for (cnt = 0 ; cnt < PIVOTS ; cnt++)
-	{
-		base[cnt] = array[cnt * nmemb / PIVOTS];
-	}
-
-	quadsort(base, PIVOTS, sizeof(long long), cmp);
-
-	run = last = 0;
-	pth = hash;
-
-	for (pta = array ; pta < pte ; pta++)
-	{
-		size[*pth++ = flux_binary_search64(base, *pta, cmp)]++;
-	}
-
-	pts = swap;
-
-	for (cnt = 0 ; cnt < PIVOTS ; cnt++)
-	{
-		bptr[cnt] = pts;
-
-		pts += size[cnt];
-	}
-
-	pth = hash;
-
-	for (pta = array ; pta < pte ; pta++)
-	{
-		*bptr[*pth++]++ = *pta;
-	}
-
-	pta = array;
-	pts = swap;
-	pth = hash;
-
-	for (cnt = 0 ; cnt < PIVOTS ; cnt++)
-	{
-		nmemb = size[cnt];
-
-		if (stage == 0)
-		{
-			if (nmemb < 1024)
-			{
-				memcpy(pta, pts, nmemb * sizeof(long long));
-				quadsort_swap64(pta, pts, nmemb, sizeof(long long), cmp);
-			}
-			else
-			{
-				flux_swap64(pts, pta, pth, nmemb, 1, cmp);
-			}
-		}
-		else
-		{
-			quadsort_swap64(pts, pta, nmemb, sizeof(long long), cmp);
-		}
-		pta += nmemb;
-		pts += nmemb;
-		pth += nmemb;
-	}
-	return 1;
-}
+#include "fluxsort.c"
 
 //////////////////////////////////////////////////////////////////////////
 //┌────────────────────────────────────────────────────────────────────┐//
@@ -377,45 +155,35 @@ size_t flux_swap64(long long *array, long long *swap, unsigned char *hash, size_
 
 void fluxsort(void *array, size_t nmemb, size_t size, CMPFUNC *cmp)
 {
-	if (nmemb < 1024)
+	if (nmemb < 2)
 	{
-		return quadsort(array, nmemb, size, cmp);
+		return;
 	}
 
-	if (size == sizeof(int))
+	switch (size)
 	{
-		int *swap = malloc(nmemb * size + nmemb * sizeof(unsigned char));
+		case sizeof(char):
+			return fluxsort8(array, nmemb, cmp);
 
-		if (swap == NULL)
-		{
-			fprintf(stderr, "fluxsort(%p,%zu,%zu): malloc() failed: %s\n", array, nmemb, size, strerror(errno));
+		case sizeof(short):
+			return fluxsort16(array, nmemb, cmp);
 
-			return;
-		}		
+		case sizeof(int):
+			return fluxsort32(array, nmemb, cmp);
 
-		flux_swap32(array, swap, (unsigned char *) (swap + nmemb), nmemb, 0, cmp);
+		case sizeof(long long):
+			return fluxsort64(array, nmemb, cmp);
 
-		free(swap);
-	}
-	else if (size == sizeof(long long))
-	{
-		long long *swap = malloc(nmemb * size + nmemb * sizeof(unsigned char));
+		case sizeof(long double):
+			return fluxsort128(array, nmemb, cmp);
 
-		if (swap == NULL)
-		{
-			fprintf(stderr, "fluxsort(%p,%zu,%zu): malloc() failed: %s\n", array, nmemb, size, strerror(errno));
-
-			return;
-		}
-
-		flux_swap64(array, swap, (unsigned char *) (swap + nmemb), nmemb, 0, cmp);
-
-		free(swap);
-	}
-	else
-	{
-		assert(size == sizeof(int) || size == sizeof(long long));
+		default:
+			return assert(size == sizeof(char) || size == sizeof(short) || size == sizeof(int) || size == sizeof(long long) || size == sizeof(long double));
 	}
 }
+
+#undef VAR
+#undef FUNC
+#undef STRUCT
 
 #endif

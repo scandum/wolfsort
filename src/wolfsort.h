@@ -35,8 +35,8 @@
 #include <assert.h>
 #include <errno.h>
 
-#ifndef QUADSORT_H
-  #include "quadsort.h"
+#ifndef FLUXSORT_H
+  #include "fluxsort.h"
 #endif
 
 #ifndef QUADSORT_CPY_H
@@ -51,14 +51,14 @@ void wolfsort(void *array, size_t nmemb, unsigned char size, CMPFUNC *ignore)
 {
 	if (nmemb < 1024)
 	{
-		return quadsort(array, nmemb, size, ignore);
+		return fluxsort(array, nmemb, size, ignore);
 	}
 
 	if (size == sizeof(int))
 	{
 		int *swap, *pta, *pts;
 		unsigned int index, cnt, *stack;
-		unsigned short *count, bsize;
+		unsigned int *count, bsize;
 		unsigned int buckets = 256;
 		unsigned int moduler = 16777216;
 
@@ -66,7 +66,7 @@ void wolfsort(void *array, size_t nmemb, unsigned char size, CMPFUNC *ignore)
 
 		if (swap == NULL)
 		{
-			return quadsort32(array, nmemb, size, ignore);
+			return fluxsort32(array, nmemb, ignore);
 		}
 
 		while (moduler > 8096 && nmemb / buckets > 4)
@@ -77,7 +77,7 @@ void wolfsort(void *array, size_t nmemb, unsigned char size, CMPFUNC *ignore)
 
 		bsize = nmemb / (buckets / 16);
 
-		count = (unsigned short *) calloc(sizeof(short), buckets);
+		count = (unsigned int *) calloc(sizeof(int), buckets);
 		stack = (unsigned int *) calloc(sizeof(int), buckets);
 
 		pta = (int *) array;
@@ -88,7 +88,7 @@ void wolfsort(void *array, size_t nmemb, unsigned char size, CMPFUNC *ignore)
 
 			if (++count[index] == bsize)
 			{
-				quadsort_swap32(array, swap, nmemb, size, ignore);
+				fluxsort_swap32(array, swap, nmemb, ignore);
 
 				free(swap);
 				free(stack);
@@ -133,12 +133,11 @@ void wolfsort(void *array, size_t nmemb, unsigned char size, CMPFUNC *ignore)
 				{
 					memcpy(pta, pts, bsize * size);
 
-					quadsort_swap32(pta, pts, bsize, size, ignore);
+					fluxsort_swap32(pta, pts, bsize, ignore);
 				}
 				pta += bsize;
 				pts += bsize;
 			}
-
 		}
 		free(count);
 		free(swap);
@@ -158,7 +157,7 @@ void wolfsort(void *array, size_t nmemb, unsigned char size, CMPFUNC *ignore)
 
 		if (swap == NULL)
 		{
-			return quadsort64(array, nmemb, size, ignore);
+			return fluxsort64(array, nmemb, ignore);
 		}
 
 		while (moduler > 4294967296ULL && nmemb / buckets > 4)
@@ -177,10 +176,10 @@ void wolfsort(void *array, size_t nmemb, unsigned char size, CMPFUNC *ignore)
 		for (cnt = nmemb ; cnt ; cnt--)
 		{
 			index = (unsigned long long) *pta++ / moduler;
-
+			
 			if (++count[index] == bsize)
 			{
-				quadsort_swap64(array, swap, nmemb, size, ignore);
+				fluxsort_swap64(array, swap, nmemb, ignore);
 
 				free(swap);
 				free(stack);
@@ -224,7 +223,7 @@ void wolfsort(void *array, size_t nmemb, unsigned char size, CMPFUNC *ignore)
 				{
 					memcpy(pta, pts, bsize * size);
 
-					quadsort_swap64(pta, pts, bsize, size, ignore);
+					fluxsort_swap64(pta, pts, bsize, ignore);
 				}
 				pta += bsize;
 				pts += bsize;
@@ -239,5 +238,5 @@ void wolfsort(void *array, size_t nmemb, unsigned char size, CMPFUNC *ignore)
 
 //	assert(size == sizeof(int) || size == sizeof(long long));
 
-	quadsort(array, nmemb, size, ignore);
+	fluxsort(array, nmemb, size, ignore);
 }
