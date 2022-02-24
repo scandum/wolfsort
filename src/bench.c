@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2014-2021 Igor van den Hoven ivdhoven@gmail.com
+	Copyright (C) 2014-2022 Igor van den Hoven ivdhoven@gmail.com
 */
 
 /*
@@ -14,9 +14,6 @@
 	The above copyright notice and this permission notice shall be
 	included in all copies or substantial portions of the Software.
 
-	The person recognizes Mars as a free planet and that no Earth-based
-	government has authority or sovereignty over Martian activities.
-
 	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 	MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -28,7 +25,11 @@
 
 /*
 	To compile use:
-	
+
+	gcc -O3 bench.c
+
+	or
+
 	g++ -O3 -w -fpermissive bench.c
 */
 
@@ -37,64 +38,75 @@
 #include <string.h>
 #include <sys/time.h>
 #include <time.h>
-#include <assert.h>
 #include <errno.h>
 #include <math.h>
-#include <algorithm>
-#include <vector>
 
-#include <cassert>
-#include <random>
-#include <array>
-#include <iostream>
-#include <memory.h>
 
-#define cmp(a,b) (*(a) > *(b))
+#define cmp(a,b) (*(a) > *(b)) // uncomment for fast primitive comparisons
 
-#include "quadsort.h"
+#include "crumsort.h"
 #include "fluxsort.h"
-#include "wolfsort.h"
 #include "gridsort.h"
-#include "blitsort.h"
+#include "quadsort.h"
+#include "wolfsort.h"
 
+#ifdef __GNUG__
+#include <algorithm>
 //#include "pdqsort.h" // https://github.com/orlp/pdqsort/blob/master/pdqsort.h
 //#include "timsort.h" // https://github.com/timsort/cpp-TimSort
-
-#define STDSORT_H
+#endif
 
 //typedef int CMPFUNC (const void *a, const void *b);
 
-typedef void SRTFUNC(void *array, size_t nmemb, size_t size, CMPFUNC *ignore);
+typedef void SRTFUNC(void *array, size_t nmemb, size_t size, CMPFUNC *cmpf);
 
-// benchmarking utilities
 
-// Must prevent inlining so the benchmark is fair.
-// Remove __attribute__ ((noinline)) and counter++ for full throttle.
+// Must prevent inlining so the benchmark is fair against qsort.
 
-long long counter;
+// Remove __attribute__ ((noinline)) and comparisons++ for full throttle.
+
+size_t comparisons;
 
 __attribute__ ((noinline)) int cmp_int(const void * a, const void * b)
 {
-	const int fa = *(const int *) a;
-	const int fb = *(const int *) b;
+	int fa = *(int *)a;
+	int fb = *(int *)b;
 
-	counter++;
+	comparisons++;
 
+//	return (fa > fb) - (fa < fb);
 	return fa - fb;
+}
+
+__attribute__ ((noinline)) int cmp_rev(const void * a, const void * b)
+{
+	int fa = *(int *)a;
+	int fb = *(int *)b;
+
+	comparisons++;
+
+	return fb - fa;
 }
 
 __attribute__ ((noinline)) int cmp_stable(const void * a, const void * b)
 {
-	counter++;
+	int fa = *(int *)a;
+	int fb = *(int *)b;
 
-	return *(int *) a / 1000 - *(int *) b / 1000;
+	comparisons++;
+
+	return fa / 100000 - fb / 100000;
 }
 
 __attribute__ ((noinline)) int cmp_long(const void * a, const void * b)
 {
-	counter++;
+	const long long fa = *(const long long *) a;
+	const long long fb = *(const long long *) b;
 
-	return *(long long *) a > *(long long *) b ? 1 : 0;
+	comparisons++;
+
+	return (fa > fb) - (fa < fb);
+//	return (fa > fb);
 }
 
 __attribute__ ((noinline)) int cmp_long_double(const void * a, const void * b)
@@ -102,22 +114,23 @@ __attribute__ ((noinline)) int cmp_long_double(const void * a, const void * b)
 	const long double fa = *(const long double *) a;
 	const long double fb = *(const long double *) b;
 
-	counter++;
+	comparisons++;
 
-	return *(long double *) a > *(long double *) b ? 1 : 0;
-/*
-	if (isnan(fa) || isnan(fb))
+	return (fa > fb) - (fa < fb);
+
+/*	if (isnan(fa) || isnan(fb))
 	{
 		return isnan(fa) - isnan(fb);
 	}
 
-	return ((fa > fb) - (fa < fb));
+	return (fa > fb);
 */
 }
 
+
 int cmp_str(const void * a, const void * b)
 {
-	counter++;
+	comparisons++;
 
 	return strcmp(*(const char **) a, *(const char **) b);
 }
@@ -137,64 +150,25 @@ long long utime()
 	return now_time.tv_sec * 1000000LL + now_time.tv_usec;
 }
 
-unsigned long long randval;
-unsigned short randkey;
-
 void seed_rand(unsigned long long seed)
 {
 	srand(seed);
-
-	randval = 0;
-	randkey = 0;
 }
 
-int generate_rand()
-{
-	static short randlist[] = { 635, 202,  47, 229, 311, 319, 512, 456, 645, 496, 230, 548, 680, 785,  95, 577,  10, 990, 215, 120, 316, 602, 281, 521, 498, 871, 688,  83, 789,  15, 952, 851, 499, 618, 168, 623, 946, 810, 326, 174, 586, 204, 400, 193, 619,  99, 382, 975, 935, 867, 756, 146, 509, 664, 155, 121, 790, 798, 924, 809, 648, 848, 704, 761, 578, 219, 211, 379, 272, 823, 860,  62, 331, 689, 796, 365,  64, 537, 129, 106, 507, 563, 514, 394,  80, 978, 890, 642, 757, 397, 413, 862, 726, 124, 329, 395,  26, 765, 727, 245, 784, 422,  69, 253, 665, 711, 484,1000, 274,  75, 754,   8, 900, 296, 136, 742,  23, 112,  86, 604, 740, 583, 687, 251, 831, 295, 483, 728, 780, 930, 703, 628, 772, 134, 712, 290, 363, 559, 438, 541,  35, 152, 127, 141, 934,  88, 226, 461, 692, 959, 614, 116, 323, 891, 607,  19, 377, 344,  51, 409, 300, 841, 519, 367,  44, 844, 543, 824, 699, 238, 643, 529, 317, 861,  30, 575, 600, 629, 621, 589, 314, 947, 273, 615, 854, 915,  97, 598, 327, 225, 366, 717, 405, 579, 534,  42, 939, 555, 746,  56,  -1, 768, 622, 749, 639, 503, 123, 364, 440, 582, 686, 111, 592, 696,  54, 685,  91,  84, 815, 213,  58, 806, 228, 481, 487, 426, 655, 974, 189,  48, 305, 567, 408, 139, 337, 195, 666, 950, 849, 502, 510, 896, 508, 353, 762, 200, 962, 801, 807,  74, 562, 335, 817, 656, 658, 268,  93, 332, 743, 953, 275, 362, 993,   9, 439, 304, 721, 786, 347, 695, 932, 956,  39, 661, 386, 147, 170, 999, 886, 125, 209, 977, 778, 417, 166, 553, 585, 128, 863, 430, 828, 760, 971, 374, 613, 958, 114, 271, 187, 167, 533, 735, 130, 117, 470, 899, 183, 544, 855, 471, 856,  17, 280, 513, 581, 766, 410, 217, 800, 165, 858, 574, 938, 457, 928, 398, 516, 819,  57, 826, 526, 911, 278,  78, 682, 460, 916, 944, 348, 773, 840, 700, 907, 455, 587,  98, 803, 632, 732, 452, 158, 485, 774, 875, 926, 320, 820,  31, 976, 336, 731, 545, 451, 110, 898, 775,  65, 431, 432, 143, 196, 449, 429, 105, 651, 558, 324,  40, 887, 670, 266, 294,  94, 720, 465, 985, 612, 564, 435, 473, 433, 736,  36, 151, 659, 118, 620, 436, 684, 162,  81, 406, 877, 552,  29, 292, 706, 286, 637, 741, 265, 423, 897, 838, 835, 631, 690, 869, 968, 488, 532, 244, 538, 325, 909, 918, 171, 825, 965, 210, 556, 355, 994, 821, 771, 942,  18, 142, 179, 207, 258, 984, 252, 298, 970,   5, 960, 590, 961, 748, 458,  14, 234, 747, 178, 107, 415, 561, 176, 986, 378, 315, 352, 328, 239,  77,  37, 357, 262,  25, 650, 906, 992, 881, 599, 836, 805, 199, 626, 842, 233, 933, 674,  90, 421, 160, 387, 948, 719, 192, 657, 913, 420, 401, 257, 845, 763, 235, 609, 360, 549, 669, 852, 540, 425, 843, 859, 437, 921, 227, 865, 223, 901, 963, 678, 610, 660, 243, 812, 249,  76, 282, 480, 321, 447, 291, 232, 216, 725,   2, 949, 254,  66, 551, 109, 853, 722, 770,  50, 799, 969, 462, 181, 570,  85, 649, 568,  87,  41,  55, 531, 905, 873, 389, 270, 910, 381, 222, 634, 565, 153, 888, 157,  12, 697, 369, 385, 857, 596,  59, 528, 597, 987, 611, 834, 205, 191, 115, 312, 776, 246, 520, 497, 522, 751, 662, 370, 515, 638, 804, 995, 560, 203, 135, 482, 264, 633, 866, 444,  13, 795, 554,   6, 755, 788, 943, 988, 248, 240, 293, 966, 654, 428, 412, 917, 603, 955, 730, 138, 122, 399, 500, 467, 892, 104, 707, 698, 375, 716, 874, 380, 330, 880, 624, 277, 997, 212,  28, 414, 672, 769, 256, 595, 530, 705, 302, 702,  16, 713, 103, 448, 150, 889,  68, 576, 102, 914, 403, 505, 967, 572, 920, 868, 486, 476,  34,  79, 945, 182, 802, 679, 126, 536, 723, 715, 830,  67, 644, 523, 427, 673, 208, 677, 829, 464, 359, 338, 388, 940, 701, 504, 954, 535, 601, 557, 101, 864, 185, 354, 474, 133, 169, 145, 832, 310, 653, 816, 671, 833,  96, 214, 989, 964, 220, 753, 511, 902, 284, 606, 361, 839, 744, 402,  89, 738, 376, 495, 494, 259,  20, 847, 255,   3, 925, 883, 148, 779, 903, 588, 927, 303, 759, 285, 391,  45, 190,  32, 973, 113, 781, 797, 591, 822, 188, 368, 221,   4, 683, 491,  63, 782, 694, 161, 247, 893, 418, 313, 652, 501, 724, 392, 159, 573,  61,  82, 922, 267, 709, 524, 617, 792, 373,   7, 269, 149, 184, 627, 383, 100, 814, 137, 459, 827, 198, 396, 289, 108, 342, 729, 941, 493, 371, 206, 393, 341, 472, 983, 550, 318, 640, 641, 919, 951, 580, 894, 339, 131, 878, 197, 908, 156, 132, 468, 384, 201,  43, 681, 419, 982, 998, 154, 475, 279, 593, 739, 236, 787,  27,  92, 767, 119, 818, 569, 301, 346, 636, 885, 605, 306, 180, 340, 663,  22, 441, 584, 646, 693, 837, 708, 691, 194, 322, 527, 808, 443, 811, 283,  71, 566, 542, 453, 676, 261, 608, 794, 980, 518, 224, 675, 616, 263, 434, 241, 349, 260, 850, 309, 870, 490, 594, 358, 630, 390,  53,  46, 173, 299, 846, 625, 163,  49, 164, 463, 469, 745, 547,  11, 750, 979, 172, 218, 758,  60, 478, 345, 175, 186, 546, 287,  52, 237, 876, 404, 424,  72, 783, 350, 912, 144, 177, 454, 667, 872, 710, 351, 981, 334, 479, 416,  33, 996, 882, 937, 442, 242, 929, 450, 571, 733, 647, 506,  38,  24, 718, 297,  70, 525, 764, 445,  73, 714, 791, 250, 466, 752, 668, 140, 923, 489, 813, 477, 936, 972, 777, 879, 231, 793, 991, 904, 895,  21, 931, 308, 884, 492, 446, 737, 957, 372, 407, 517, 734, 307, 288, 343, 333, 276, 539, 356, 411 };
-
-	return 1000 + randlist[++randkey % 1000];
-}
-
-bool int_cmp(const void * a, const void * b)
-{
-	const int fa = *(const int *) a;
-	const int fb = *(const int *) b;
-
-	counter++;
-
-	return a < b;
-}
-
-bool long_cmp(const void * a, const void * b)
-{
-	const long long fa = *(const long long *) a;
-	const long long fb = *(const long long *) b;
-
-	counter++;
-
-	return a < b ? 1 : 0;
-}
-
-bool str_cmp(const void * a, const void * b)
-{
-	counter++;
-
-	return strcmp((const char *) a, (const char *) b) < 0;
-}
-
-void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximum, int samples, int repetitions, SRTFUNC *srt, const char *name, const char *desc, size_t size, CMPFUNC *cmpf)
+void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximum, int samples, int repetitions, SRTFUNC *srt, const char *name, char *desc, size_t size, CMPFUNC *cmpf)
 {
 	long long start, end, total, best, average;
 	size_t sam, max;
-	long long *ptla = (long long *) array;
-	long double *ptda = (long double *) array;
-	int *pta = (int *) array, *ptv = (int *) valid, cnt;
+	long long *ptla = (long long *) array, *ptlv = valid;
+	long double *ptda = (long double *) array, *ptdv = valid;
+	int *pta = (int *) array, *ptv = (int *) valid, cnt, rep, name32;
+	char **ptsa = (char **) array, **ptsv = (char **) valid;
 
-	if (*name == '+')
+	if (*name == '*')
 	{
-		if (!strcmp(desc, "random order") || !strcmp(desc, "rand 1-4") || !strcmp(desc, "random 4") || !strcmp(desc, "random string"))
+		if (!strcmp(desc, "random order") || !strcmp(desc, "random 1-4") || !strcmp(desc, "random 4") || !strcmp(desc, "random string"))
 		{
-			if (counter)
+			if (comparisons)
 			{
 				printf("%s\n", "|      Name |    Items | Type |     Best |  Average |  Compares | Samples |     Distribution |");
 				printf("%s\n", "| --------- | -------- | ---- | -------- | -------- | --------- | ------- | ---------------- |");
@@ -212,7 +186,14 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 		return;
 	}
 
+	name32 = name[0] + (name[1] ? name[1] * 32 : 0) + (name[2] ? name[2] * 1024 : 0);
+
 	best = average = 0;
+
+	if (minimum == 7 && maximum == 7)
+	{
+		printf("\e[1;32m%10d %10d %10d %10d %10d %10d %10d\e[0m\n", pta[0], pta[1], pta[2], pta[3], pta[4], pta[5], pta[6]);
+	}
 
 	for (sam = 0 ; sam < samples ; sam++)
 	{
@@ -222,110 +203,64 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 
 		start = utime();
 
-		for (int rep = repetitions - 1 ; rep >= 0 ; rep--)
+		for (rep = repetitions - 1 ; rep >= 0 ; rep--)
 		{
-			memcpy(array, unsorted + rep * max * size, max * size);
+			memcpy(array, (char *) unsorted + maximum * rep * size, max * size);
 
-			counter = 0;
+			comparisons = 0;
 
-			switch (*name)
+			// edit *sorts[] in main() to add / remove sorts
+
+			switch (name32)
 			{
-				case 'b':
-					blitsort(array, max, size, cmpf);
+				case 'c' + 'r' * 32 + 'u' * 1024:
+					crumsort(array, max, size, cmpf);
 					break;
 
-				case 'q':
-					quadsort(array, max, size, cmpf);
-					break;
-
-				case 'f':
+				case 'f' + 'l' * 32 + 'u' * 1024:
 					fluxsort(array, max, size, cmpf);
 					break;
-
-				case 'g':
+				
+				case 'g' + 'r' * 32 + 'i' * 1024:
 					gridsort(array, max, size, cmpf);
 					break;
 
-				case 's':
-#ifdef STDSORT_H
-
-					if (size == sizeof(int))
-					{
-//						std::sort(pta, pta + max);
-						std::stable_sort(pta, pta + max);
-					}
-					else if (size == sizeof(long long))
-					{
-//						std::sort(ptla, ptla + max);
-						std::stable_sort(ptla, ptla + max);
-					}
-					else
-					{
-//						std::sort(ptda, ptda + max);
-						std::stable_sort(ptda, ptda + max);
-					}
+				case 'q' + 's' * 32 + 'o' * 1024:
+					qsort(array, max, size, cmpf);
 					break;
-#else
-					return;
-#endif
 
-#ifdef PDQSORT_H
-				case 'p':
-/*					if (cmpf == cmp_str)
-					{
-						pdqsort_branchless(ptla, ptla + max, str_cmp);
-					}
-					else*/ if (size == sizeof(int))
-					{
-						pdqsort(pta, pta + max);
-//						pdqsort_branchless(pta, pta + max, int_cmp);
-					}
-					else if (size == sizeof(long long))
-					{
-						pdqsort(ptla, ptla + max);
-//						pdqsort_branchless(ptla, ptla + max, long_cmp);
-					}
-					else
-					{
-						pdqsort(ptda, ptda + max);
-//						pdqsort_branchless(ptda, ptda + max, double_cmp);
-					}
+				case 'q' + 'u' * 32 + 'a' * 1024:
+					quadsort(array, max, size, cmpf);
 					break;
-#endif
 
-				case 't':
-#ifdef GFX_TIMSORT_HPP
-					if (size == sizeof(int))
-					{
-						gfx::timsort(pta, pta + max);
-					}
-					else if (size == sizeof(long long))
-					{
-						gfx::timsort(ptla, ptla + max);
-					}
-					else
-					{
-						gfx::timsort(ptda, ptda + max);
-					}
-					break;
-#else
-					return;
-#endif
-
-
-				case 'w':
+				case 'w' + 'o' * 32 + 'l' * 1024:
 					wolfsort(array, max, size, cmpf);
 					break;
+
+#ifdef PDQSORT_H
+				case 'p' + 'd' * 32 + 'q' * 1024:
+					if (size == sizeof(int)) pdqsort(pta, pta + max); else if (size == sizeof(long long)) pdqsort(ptla, ptla + max); else pdqsort(ptda, ptda + max);
+					break;
+#endif
+#ifdef __GNUG__
+				case 's' + 'o' * 32 + 'r' * 1024:
+					if (size == sizeof(int)) std::sort(pta, pta + max); else if (size == sizeof(long long)) std::sort(ptla, ptla + max); else std::sort(ptda, ptda + max);
+					break;
+
+				case 's' + 't' * 32 + 'a' * 1024:
+					if (size == sizeof(int)) std::stable_sort(pta, pta + max); else if (size == sizeof(long long)) std::stable_sort(ptla, ptla + max); else std::stable_sort(ptda, ptda + max);
+					break;
+#endif
+#ifdef GFX_TIMSORT_HPP
+				case 't' + 'i' * 32 + 'm' * 1024:
+					if (size == sizeof(int)) gfx::timsort(pta, pta + max); else if (size == sizeof(long long)) gfx::timsort(ptla, ptla + max); else gfx::timsort(ptda, ptda + max);
+					break;
+#endif
 			}
 
-			if (minimum < maximum)
+			if (minimum < maximum && ++max > maximum)
 			{
-				max++;
-			
-				if (max > maximum)
-				{
-					max = minimum;
-				}
+				max = minimum;
 			}
 		}
 		end = utime();
@@ -337,6 +272,11 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 			best = total;
 		}
 		average += total;
+	}
+
+	if (minimum == 7 && maximum == 7)
+	{
+		printf("\e[1;32m%10d %10d %10d %10d %10d %10d %10d\e[0m\n", pta[0], pta[1], pta[2], pta[3], pta[4], pta[5], pta[6]);
 	}
 
 	if (repetitions == 0)
@@ -352,44 +292,34 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 		{
 			if (pta[cnt - 1] > pta[cnt])
 			{
-				if (maximum == 1000)
-				{
-					printf("%17s: sorted %7d i%ds in %f seconds. KO: %5lld (un%s)\n", name, maximum, (int) size * 8, best / 1000000.0, counter, desc);
-				}
-				else if (maximum == 1000000)
-				{
-					printf("%17s: sorted %7d i%ds in %f seconds. MO: %10lld (un%s)\n", name, maximum, (int) size * 8, best / 1000000.0, counter, desc);
-				}
-				else
-				{
-					printf("%17s: sorted %7d i%ds in %f seconds. (un%s)\n", name, maximum, (int) size * 8, best / 1000000.0, desc);
-				}
-				return;
+				sprintf(desc, "\e[1;31m%16s\e[0m", "unstable");
+
+				break;
 			}
 		}
 	}
 
-	if (counter)
+	if (comparisons)
 	{
-		printf("|%10s | %8d | %4d | %f | %f | %9d | %7d | %16s |\n", name, maximum, (int) size * 8, best / 1000000.0, average / 1000000.0, (int) counter, samples, desc);
+		printf("|%10s | %8d | %4d | %f | %f | %9d | %7d | %16s |\n", name, maximum, (int) size * 8, best / 1000000.0, average / 1000000.0, (int) comparisons, samples, desc);
 	}
 	else
 	{
 		printf("|%10s | %8d | %4d | %f | %f | %9d | %7d | %16s |\n", name, maximum, (int) size * 8, best / 1000000.0, average / 1000000.0, repetitions, samples, desc);
 	}
 
-	if (minimum != maximum)
+	if (minimum != maximum || cmpf == cmp_stable)
 	{
 		return;
 	}
 
-	for (cnt = 1 ; cnt < max ; cnt++)
+	for (cnt = 1 ; cnt < maximum ; cnt++)
 	{
 		if (cmpf == cmp_str)
 		{
-			if (strcmp((char *) ptla[cnt - 1], (char *) ptla[cnt]) > 0)
+			if (strcmp((char *) ptsa[cnt - 1], (char *) ptsa[cnt]) > 0)
 			{
-				printf("%17s: not properly sorted at index %d. (%s vs %s\n", name, cnt, (char *) ptla[cnt - 1], (char *) ptla[cnt]);
+				printf("%17s: not properly sorted at index %d. (%s vs %s\n", name, cnt, (char *) ptsa[cnt - 1], (char *) ptsa[cnt]);
 				break;
 			}
 		}
@@ -413,15 +343,47 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 				break;
 			}
 		}
+		else if (size == sizeof(long double))
+		{
+			if (cmp_long_double(&ptda[cnt - 1], &ptda[cnt]) > 0)
+			{
+				printf("%17s: not properly sorted at index %d. (%Lf vs %Lf\n", name, cnt, ptda[cnt - 1], ptda[cnt]);
+				break;
+			}
+		}
 	}
 
-	if (size == sizeof(int))
+	for (cnt = 1 ; cnt < maximum ; cnt++)
 	{
-		for (cnt = 1 ; cnt < max ; cnt++)
+		if (cmpf == cmp_str)
+		{
+			if (strcmp((char *) ptsa[cnt], (char *) ptsv[cnt]))
+			{
+				printf("         validate: array[%d] != valid[%d]. (%s vs %s\n", cnt, cnt, (char *) ptsa[cnt], (char *) ptsv[cnt]);
+				break;
+			}
+		}
+		else if (size == sizeof(int))
 		{
 			if (pta[cnt] != ptv[cnt])
 			{
 				printf("         validate: array[%d] != valid[%d]. (%d vs %d\n", cnt, cnt, pta[cnt], ptv[cnt]);
+				break;
+			}
+		}
+		else if (size == sizeof(long long))
+		{
+			if (ptla[cnt] != ptlv[cnt])
+			{
+				printf("         validate: array[%d] != valid[%d]. (%lld vs %lld\n", cnt, cnt, ptla[cnt], ptlv[cnt]);
+				break;
+			}
+		}
+		else if (size == sizeof(long double))
+		{
+			if (ptda[cnt] != ptdv[cnt])
+			{
+				printf("         validate: array[%d] != valid[%d]. (%Lf vs %Lf\n", cnt, cnt, ptda[cnt], ptdv[cnt]);
 				break;
 			}
 		}
@@ -443,9 +405,8 @@ void validate()
 
 	for (cnt = 0 ; cnt < max ; cnt++)
 	{
-		r_array[cnt] = generate_rand();
+		r_array[cnt] = rand();
 	}
-
 
 	for (cnt = 1 ; cnt < 100 ; cnt++)
 	{
@@ -579,22 +540,29 @@ void validate()
 	free(v_array);
 }
 
+unsigned int bit_reverse(unsigned int x)
+{
+    x = (((x & 0xaaaaaaaa) >> 1) | ((x & 0x55555555) << 1));
+    x = (((x & 0xcccccccc) >> 2) | ((x & 0x33333333) << 2));
+    x = (((x & 0xf0f0f0f0) >> 4) | ((x & 0x0f0f0f0f) << 4));
+    x = (((x & 0xff00ff00) >> 8) | ((x & 0x00ff00ff) << 8));
+
+    return((x >> 16) | (x << 15));
+}
 
 int main(int argc, char **argv)
 {
 	int max = 100000;
-	int samples = 100;
+	int samples = 10;
 	int repetitions = 1;
 	int seed = 0;
-	size_t memory;
-	size_t cnt, rnd, lst, rep;
+	int cnt, rnd, lst, rep;
+	size_t mem;
 	int *a_array, *r_array, *v_array;
 	long long *la_array, *lr_array, *lv_array;
 	long double *da_array, *dr_array, *dv_array;
 
-	char dist[100];
-	char *sorts[] = { "+", "stablesort", "blitsort", "quadsort", "gridsort", "fluxsort", "wolfsort" };
-//	char *sorts[] = { "+", "timsort", "stablesort", "quadsort", "gridsort", "fluxsort", "wolfsort" };
+	char dist[40], *sorts[] = { "*", "crumsort", "fluxsort", "gridsort", "quadsort", "wolfsort" };
 
 	if (argc >= 1 && argv[1] && *argv[1])
 	{
@@ -618,14 +586,18 @@ int main(int argc, char **argv)
 
 	validate();
 
-	if (repetitions == 0)
+	rnd = seed ? seed : time(NULL);
+
+	printf("Info: int = %lu, long long = %lu, long double = %lu\n\n", sizeof(int) * 8, sizeof(long long) * 8, sizeof(long double) * 8);
+
+	printf("Benchmark: array size: %d, samples: %d, repetitions: %d, seed: %d\n\n", max, samples, repetitions, rnd);
+
+	if (samples == 0 && repetitions == 0)
 	{
 		goto small_range_test;
 	}
 
-	memory = repetitions * max;
-
-	rnd = seed ? seed : time(NULL);
+	mem = max * repetitions;
 
 	// C string
 
@@ -642,13 +614,13 @@ int main(int argc, char **argv)
 
 		for (cnt = 0 ; cnt < max ; cnt++)
 		{
-			sprintf(buffer + cnt * 16, "%X", rand());
+			sprintf(buffer + cnt * 16, "%X", rand() % 1000000);
 
 			sr_array[cnt] = buffer + cnt * 16;
 		}
 
 		memcpy(sv_array, sr_array, max * sizeof(char *));
-		quadsort(sv_array, max, sizeof(char *), cmp_str);
+		qsort(sv_array, max, sizeof(char *), cmp_str);
 
 		for (cnt = 0 ; cnt < sizeof(sorts) / sizeof(char *) ; cnt++)
 		{
@@ -667,7 +639,7 @@ int main(int argc, char **argv)
 	// 128 bit
 
 	da_array = (long double *) malloc(max * sizeof(long double));
-	dr_array = (long double *) malloc(memory * sizeof(long double));
+	dr_array = (long double *) malloc(mem * sizeof(long double));
 	dv_array = (long double *) malloc(max * sizeof(long double));
 
 	if (da_array == NULL || dr_array == NULL || dv_array == NULL)
@@ -679,9 +651,9 @@ int main(int argc, char **argv)
 
 	seed_rand(rnd);
 
-	for (cnt = 0 ; cnt < memory ; cnt++)
+	for (cnt = 0 ; cnt < mem ; cnt++)
 	{
-		dr_array[cnt] = rand() + 1.0 / (long double) (rand() + (rand() << 30LL));
+		dr_array[cnt] = rand() + 1.0 / (long double) (1 + rand());
 	}
 
 	memcpy(dv_array, dr_array, max * sizeof(long double));
@@ -689,19 +661,19 @@ int main(int argc, char **argv)
 
 	for (cnt = 0 ; cnt < sizeof(sorts) / sizeof(char *) ; cnt++)
 	{
-		  test_sort(da_array, dr_array, dv_array, max, max, samples, repetitions, qsort, sorts[cnt], "random order", sizeof(long double), cmp_long_double);
+		test_sort(da_array, dr_array, dv_array, max, max, samples, repetitions, qsort, sorts[cnt], "random order", sizeof(long double), cmp_long_double);
 	}
-
-	printf("\n");
 
 	free(da_array);
 	free(dr_array);
 	free(dv_array);
 
+	printf("\n");
+
 	// 64 bit
 
 	la_array = (long long *) malloc(max * sizeof(long long));
-	lr_array = (long long *) malloc(memory * sizeof(long long));
+	lr_array = (long long *) malloc(mem * sizeof(long long));
 	lv_array = (long long *) malloc(max * sizeof(long long));
 
 	if (la_array == NULL || lr_array == NULL || lv_array == NULL)
@@ -711,11 +683,9 @@ int main(int argc, char **argv)
 		return 0;
 	}
 
-	printf("Benchmark: array size: %d, samples: %d, repetitions: %d, seed: %d\n\n", max, samples, repetitions, rnd);
-
 	seed_rand(rnd);
 
-	for (cnt = 0 ; cnt < memory ; cnt++)
+	for (cnt = 0 ; cnt < mem ; cnt++)
 	{
 		lr_array[cnt] = rand();
 		lr_array[cnt] += (unsigned long long) rand() << 32ULL;
@@ -738,17 +708,16 @@ int main(int argc, char **argv)
 	// 32 bit
 
 	a_array = (int *) malloc(max * sizeof(int));
-	r_array = (int *) malloc(memory * sizeof(int));
+	r_array = (int *) malloc(mem * sizeof(int));
 	v_array = (int *) malloc(max * sizeof(int));
-
 
 	// random
 
 	seed_rand(rnd);
 
-	for (cnt = 0 ; cnt < memory ; cnt++)
+	for (cnt = 0 ; cnt < mem ; cnt++)
 	{
-		r_array[cnt] = max != 1000 ? rand() : generate_rand();
+		r_array[cnt] = rand();
 	}
 
 	memcpy(v_array, r_array, max * sizeof(int));
@@ -759,16 +728,29 @@ int main(int argc, char **argv)
 		test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort, sorts[cnt], "random order", sizeof(int), cmp_int);
 	}
 
+	// random % 100
+
+	for (cnt = 0 ; cnt < mem ; cnt++)
+	{
+		r_array[cnt] = rand() % 100;
+	}
+
+	memcpy(v_array, r_array, max * sizeof(int));
+	quadsort(v_array, max, sizeof(int), cmp_int);
+
+	for (cnt = 0 ; cnt < sizeof(sorts) / sizeof(char *) ; cnt++)
+	{
+		test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort, sorts[cnt], "random % 100", sizeof(int), cmp_int);
+	}
+
 	// ascending
 
-	for (cnt = 0 ; cnt < memory ; cnt++)
+	for (cnt = 0 ; cnt < mem ; cnt++)
 	{
 		r_array[cnt] = cnt;
 	}
 
 	memcpy(v_array, r_array, max * sizeof(int));
-	memcpy(r_array, v_array, max * sizeof(int));
-
 	quadsort(v_array, max, sizeof(int), cmp_int);
 
 	for (cnt = 0 ; cnt < sizeof(sorts) / sizeof(char *) ; cnt++)
@@ -780,10 +762,9 @@ int main(int argc, char **argv)
 
 	for (cnt = 0 ; cnt < max ; cnt++)
 	{
-		r_array[cnt] = max != 1000 ? rand() : generate_rand();
+		v_array[cnt] = rand();
 	}
 
-	memcpy(v_array, r_array, max * sizeof(int));
 	quadsort(v_array + max / 4 * 0, max / 4, sizeof(int), cmp_int);
 	quadsort(v_array + max / 4 * 1, max / 4, sizeof(int), cmp_int);
 	quadsort(v_array + max / 4 * 2, max / 4, sizeof(int), cmp_int);
@@ -801,26 +782,36 @@ int main(int argc, char **argv)
 		test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort, sorts[cnt], "ascending saw", sizeof(int), cmp_int);
 	}
 
-	// uniform
 
-	for (cnt = 0 ; cnt < memory ; cnt++)
+	// pipe organ
+
+	for (cnt = 0 ; cnt < max / 2 ; cnt++)
 	{
-		r_array[cnt] = max != 1000 ? rand() % 16 : generate_rand() % 100;
+		v_array[cnt] = cnt;
 	}
 
-	memcpy(v_array, r_array, max * sizeof(int));
+	for (cnt = max / 2 ; cnt < max ; cnt++)
+	{
+		v_array[cnt] = max - cnt;
+	}
+
+	for (rep = 0 ; rep < repetitions ; rep++)
+	{
+		memcpy(r_array + rep * max, v_array, max * sizeof(int));
+	}
+
 	quadsort(v_array, max, sizeof(int), cmp_int);
 
 	for (cnt = 0 ; cnt < sizeof(sorts) / sizeof(char *) ; cnt++)
 	{
-		test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort, sorts[cnt], "generic order", sizeof(int), cmp_int);
+		test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort, sorts[cnt], "pipe organ", sizeof(int), cmp_int);
 	}
 
 	// descending
 
-	for (cnt = 0 ; cnt < memory ; cnt++)
+	for (cnt = 0 ; cnt < mem ; cnt++)
 	{
-		r_array[cnt] = (memory - cnt);
+		r_array[cnt] = (mem - cnt);
 	}
 
 	memcpy(v_array, r_array, max * sizeof(int));
@@ -833,12 +824,21 @@ int main(int argc, char **argv)
 
 	// descending saw
 
-	for (cnt = 0 ; cnt < memory ; cnt++)
+	for (cnt = 0 ; cnt < max ; cnt++)
 	{
-		r_array[cnt] = (memory - cnt - 1) % 10000;
+		v_array[cnt] = rand();
 	}
 
-	memcpy(v_array, r_array, max * sizeof(int));
+	quadsort(v_array + max / 4 * 0, max / 4, sizeof(int), cmp_rev);
+	quadsort(v_array + max / 4 * 1, max / 4, sizeof(int), cmp_rev);
+	quadsort(v_array + max / 4 * 2, max / 4, sizeof(int), cmp_rev);
+	quadsort(v_array + max / 4 * 3, max / 4, sizeof(int), cmp_rev);
+
+	for (rep = 0 ; rep < repetitions ; rep++)
+	{
+		memcpy(r_array + rep * max, v_array, max * sizeof(int));
+	}
+
 	quadsort(v_array, max, sizeof(int), cmp_int);
 
 	for (cnt = 0 ; cnt < sizeof(sorts) / sizeof(char *) ; cnt++)
@@ -848,21 +848,10 @@ int main(int argc, char **argv)
 
 	// random tail
 
-	seed_rand(rnd);
-
 	for (cnt = 0 ; cnt < max ; cnt++)
 	{
-		if (max > 1000)
-		{
-			r_array[cnt] = rand();
-		}
-		else
-		{
-			r_array[cnt] = generate_rand();
-		}
+		v_array[cnt] = rand();
 	}
-
-	memcpy(v_array, r_array, max * sizeof(int));
 	quadsort(v_array, max * 3 / 4, sizeof(int), cmp_int);
 
 	for (rep = 0 ; rep < repetitions ; rep++)
@@ -877,21 +866,12 @@ int main(int argc, char **argv)
 		test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort, sorts[cnt], "random tail", sizeof(int), cmp_int);
 	}
 
-	seed_rand(rnd);
+	// random half
 
 	for (cnt = 0 ; cnt < max ; cnt++)
 	{
-		if (max > 1000)
-		{
-			r_array[cnt] = rand();
-		}
-		else
-		{
-			r_array[cnt] = generate_rand();
-		}
+		v_array[cnt] = rand();
 	}
-
-	memcpy(v_array, r_array, max * sizeof(int));
 	quadsort(v_array, max / 2, sizeof(int), cmp_int);
 
 	for (rep = 0 ; rep < repetitions ; rep++)
@@ -906,11 +886,11 @@ int main(int argc, char **argv)
 		test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort, sorts[cnt], "random half", sizeof(int), cmp_int);
 	}
 
-	// wave
+	// tiles
 
-	for (cnt = 0 ; cnt < memory ; cnt++)
+	for (cnt = 0 ; cnt < mem ; cnt++)
 	{
-		if (cnt % 10 < 5)
+		if (cnt % 2 == 0)
 		{
 			r_array[cnt] = 16777216 + cnt;
 		}
@@ -925,53 +905,60 @@ int main(int argc, char **argv)
 
 	for (cnt = 0 ; cnt < sizeof(sorts) / sizeof(char *) ; cnt++)
 	{
-		test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort, sorts[cnt], "ascending tiles", sizeof(int), cmp_int);
+		strcpy(dist, "ascending tiles");
+
+		test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort, sorts[cnt], dist, sizeof(int), cmp_stable);
 	}
 
-	if (repetitions > 0)
+	// bit-reversal
+
+	for (cnt = 0 ; cnt < mem ; cnt++)
 	{
-		goto end;
+		r_array[cnt] = bit_reverse(cnt);
 	}
+
+	memcpy(v_array, r_array, max * sizeof(int));
+	quadsort(v_array, max, sizeof(int), cmp_int);
+
+	for (cnt = 0 ; cnt < sizeof(sorts) / sizeof(char *) ; cnt++)
+	{
+		test_sort(a_array, r_array, v_array, max, max, samples, repetitions, qsort, sorts[cnt], "bit reversal", sizeof(int), cmp_int);
+	}
+
+	goto end;
 
 	small_range_test:
 
-	if (max >= 10000000)
-	{
-		goto giant_range_test;
-	}
-
-	memory = 32768 * 8;
+	mem = 32768 * 16;
 
 	a_array = (int *) malloc(max * sizeof(int));
-	r_array = (int *) malloc(memory * sizeof(int));
+	r_array = (int *) malloc(mem * sizeof(int));
 	v_array = (int *) malloc(max * sizeof(int));
 
-	if (max >= 100000)
+	srand(rnd);
+
+	for (cnt = 0 ; cnt < mem ; cnt++)
+	{
+		r_array[cnt] = rand();
+	}
+
+	if (max >= 1024)
 	{
 		goto large_range_test;
 	}
 
-	for (lst = 1, samples = 32768, repetitions = 4 ; samples > 0 ; repetitions *= 2, samples /= 2)
+	for (lst = 1, samples = 32768*4, repetitions = 4 ; repetitions <= samples && repetitions <= 4096 ; repetitions *= 2, samples /= 2)
 	{
-		memory = samples * repetitions;
-
 		if (max >= repetitions)
 		{
-			sprintf(dist, "rand %d-%d", lst, repetitions);
-
-			srand(rnd);
-
-			for (cnt = 0 ; cnt < memory ; cnt++)
-			{
-				r_array[cnt] = rand();
-			}
+			sprintf(dist, "random %d-%d", lst, repetitions);
 
 			memcpy(v_array, r_array, repetitions * sizeof(int));
 			quadsort(v_array, repetitions, sizeof(int), cmp_int);
 
 			for (cnt = 0 ; cnt < sizeof(sorts) / sizeof(char *) ; cnt++)
 			{
-				test_sort(a_array, r_array, v_array, lst, repetitions, 100, samples, qsort,           sorts[cnt],             dist, sizeof(int), cmp_int);
+				test_sort(a_array, r_array, v_array, lst, repetitions, 100, samples, qsort, sorts[cnt], dist, sizeof(int), cmp_int);
 			}
 			lst = repetitions + 1;
 		}
@@ -981,12 +968,7 @@ int main(int argc, char **argv)
 
 	large_range_test:
 
-	for (cnt = 0 ; cnt < memory ; cnt++)
-	{
-		r_array[cnt] = rand();
-	}
-
-	for (samples = 32768*4, repetitions = 4 ; samples > 0 ; repetitions *= 4, samples /= 4)
+	for (samples = 32768*4, repetitions = 4 ; samples > 0 ; repetitions *= 2, samples /= 2)
 	{
 		if (max >= repetitions)
 		{
@@ -1001,35 +983,6 @@ int main(int argc, char **argv)
 			}
 		}
 	}
-
-	goto end;
-
-	giant_range_test:
-
-	a_array = (int *) malloc(max * sizeof(int));
-	r_array = (int *) malloc(max * sizeof(int));
-	v_array = (int *) malloc(max * sizeof(int));
-
-	srand(rnd);
-
-	for (cnt = 0 ; cnt < max ; cnt++)
-	{
-		r_array[cnt] = rand();
-	}
-
-	for (samples = 1024*16, repetitions = 256 ; repetitions < max ; repetitions *= 4, samples /= 4)
-	{
-		memcpy(v_array, r_array, repetitions * sizeof(int));
-		quadsort(v_array, repetitions, sizeof(int), cmp_int);
-
-		sprintf(dist, "random %d", repetitions);
-
-		for (cnt = 0 ; cnt < sizeof(sorts) / sizeof(char *) ; cnt++)
-		{
-			test_sort(a_array, r_array, v_array, repetitions, repetitions, 1, samples, qsort,           sorts[cnt],             dist, sizeof(int), cmp_int);
-		}
-	}
-
 
 	end:
 

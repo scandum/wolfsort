@@ -24,168 +24,25 @@
 */
 
 /*
-	blitsort 1.1.4.3
+	blitsort 1.1.5.1
 */
 
 #ifndef BLITSORT_H
 #define BLITSORT_H
 
-// set to 0 for sqrt N cache size
+//#define cmp(a,b) (*(a) > *(b))
 
-#define BLITCACHE 512
+#ifndef QUADSORT_H
+  #include "quadsort.h"
+#endif
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <assert.h>
 #include <errno.h>
 
 typedef int CMPFUNC (const void *a, const void *b);
-
-//#define cmp(a,b) (*(a) > *(b))
-
-#define swap_two(array, swap)  \
-{  \
-	if (cmp(array, array + 1) > 0)  \
-	{  \
-		swap = array[1]; array[1] = array[0]; array[0] = swap;  \
-	}  \
-}
-
-#define swap_three(array, swap)  \
-{  \
-	if (cmp(array, array + 1) > 0)  \
-	{  \
-		if (cmp(array, array + 2) <= 0)  \
-		{  \
-			swap = array[0]; array[0] = array[1]; array[1] = swap;  \
-		}  \
-		else if (cmp(array + 1, array + 2) > 0)  \
-		{  \
-			swap = array[0]; array[0] = array[2]; array[2] = swap;  \
-		}  \
-		else  \
-		{  \
-			swap = array[0]; array[0] = array[1]; array[1] = array[2]; array[2] = swap;  \
-		}  \
-	}  \
-	else if (cmp(array + 1, array + 2) > 0)  \
-	{  \
-		if (cmp(array, array + 2) > 0)  \
-		{  \
-			swap = array[2]; array[2] = array[1]; array[1] = array[0]; array[0] = swap;  \
-		}  \
-		else   \
-		{  \
-			swap = array[2]; array[2] = array[1]; array[1] = swap;  \
-		}  \
-	}  \
-}  \
-
-#define swap_four(array, swap)  \
-{  \
-	if (cmp(array, array + 1) > 0)  \
-	{  \
-		swap = array[0]; array[0] = array[1]; array[1] = swap;  \
-	}  \
-	if (cmp(array + 2, array + 3) > 0)  \
-	{  \
-		swap = array[2]; array[2] = array[3]; array[3] = swap;  \
-	}  \
-	if (cmp(array + 1, array + 2) > 0)  \
-	{  \
-		if (cmp(array, array + 2) <= 0)  \
-		{  \
-			if (cmp(array + 1, array + 3) <= 0)  \
-			{  \
-				swap = array[1]; array[1] = array[2]; array[2] = swap;  \
-			}  \
-			else  \
-			{  \
-				swap = array[1]; array[1] = array[2]; array[2] = array[3]; array[3] = swap;  \
-			}  \
-		}  \
-		else if (cmp(array, array + 3) > 0)  \
-		{  \
-			swap = array[1]; array[1] = array[3]; array[3] = swap;  \
-			swap = array[0]; array[0] = array[2]; array[2] = swap;  \
-		}  \
-		else if (cmp(array + 1, array + 3) <= 0)  \
-		{  \
-			swap = array[1]; array[1] = array[0]; array[0] = array[2]; array[2] = swap;  \
-		}  \
-		else  \
-		{  \
-			swap = array[1]; array[1] = array[0]; array[0] = array[2]; array[2] = array[3]; array[3] = swap;  \
-		}  \
-	}  \
-}
-
-#define tail_swap_eight(array, pta, ptt, end, key, cmp) \
-{ \
-	pta = end++; \
-	ptt = pta--; \
- \
-	if (cmp(pta, ptt) > 0) \
-	{ \
-		key = *ptt; \
-		*ptt-- = *pta--; \
- \
-		if (cmp(pta - 2, &key) > 0) \
-		{ \
-			*ptt-- = *pta--; *ptt-- = *pta--; *ptt-- = *pta--; \
-		} \
-		if (pta > array && cmp(pta - 1, &key) > 0) \
-		{ \
-			*ptt-- = *pta--; *ptt-- = *pta--; \
-		} \
-		if (pta >= array && cmp(pta, &key) > 0) \
-		{ \
-			*ptt-- = *pta; \
-		} \
-		*ptt = key; \
-	} \
-}
-
-#define swap_five(array, pta, ptt, end, key, cmp) \
-{ \
-	end = array + 3; \
-	pta = end++; \
-	ptt = end++; \
- \
-	if (cmp(pta, ptt) > 0) \
-	{ \
-		key = *ptt; \
-		*ptt-- = *pta--; \
- \
-		if (cmp(pta - 1, &key) > 0) \
-		{ \
-			*ptt-- = *pta--; *ptt-- = *pta--; \
-		} \
-		if (cmp(pta, &key) > 0) \
-		{ \
-			*ptt-- = *pta; \
-		} \
-		*ptt = key; \
-	} \
-}
-
-#define swap_six(array, pta, ptt, end, key, cmp) \
-{ \
-	swap_five(array, pta, ptt, end, key, cmp); \
-	tail_swap_eight(array, pta, ptt, end, key, cmp); \
-}
-
-#define swap_seven(array, pta, ptt, end, key, cmp) \
-{ \
-	swap_six(array, pta, ptt, end, key, cmp); \
-	tail_swap_eight(array, pta, ptt, end, key, cmp); \
-}
-
-#define swap_eight(array, pta, ptt, end, key, cmp) \
-{ \
-	swap_seven(array, pta, ptt, end, key, cmp); \
-	tail_swap_eight(array, pta, ptt, end, key, cmp); \
-}
 
 //////////////////////////////////////////////////////////
 //┌────────────────────────────────────────────────────┐//
@@ -244,6 +101,8 @@ typedef int CMPFUNC (const void *a, const void *b);
 #undef FUNC
 #undef STRUCT
 
+//typedef struct {char bytes[4];} struct32;
+//#define VAR struct32
 #define VAR int
 #define FUNC(NAME) NAME##32
 #define STRUCT(NAME) struct NAME##32
@@ -292,23 +151,6 @@ typedef int CMPFUNC (const void *a, const void *b);
 
 #include "blitsort.c"
 
-/*
-struct size256
-{
-	int size256[8];
-};
-
-#undef VAR
-#undef FUNC
-#undef STRUCT
-
-#define VAR struct size256
-#define FUNC(NAME) NAME##256
-#define STRUCT(NAME) struct NAME##256
-
-#include "blitsort.c"
-*/
-
 //////////////////////////////////////////////////////////////////////////////
 //┌────────────────────────────────────────────────────────────────────────┐//
 //│   ██████┐ ██┐     ██████┐████████┐███████┐ ██████┐ ██████┐ ████████┐   │//
@@ -344,9 +186,6 @@ void blitsort(void *array, size_t nmemb, size_t size, CMPFUNC *cmp)
 		case sizeof(long double):
 			return blitsort128(array, nmemb, cmp);
 
-//		case sizeof(struct size256):
-//			return blitsort256(array, nmemb, cmp);
-
 		default:
 			return assert(size == sizeof(char) || size == sizeof(short) || size == sizeof(int) || size == sizeof(long long) || size == sizeof(long double));
 	}
@@ -355,7 +194,5 @@ void blitsort(void *array, size_t nmemb, size_t size, CMPFUNC *cmp)
 #undef VAR
 #undef FUNC
 #undef STRUCT
-
-#undef BLITCACHE
 
 #endif

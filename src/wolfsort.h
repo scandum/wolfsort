@@ -27,7 +27,7 @@
 */
 
 /*
-	wolfsort 1.1.2 (previously flowsort)
+	wolfsort 1.1.4
 */
 
 #include <stdlib.h>
@@ -35,208 +35,105 @@
 #include <assert.h>
 #include <errno.h>
 
+#ifndef WOLFSORT_H
+#define WOLFSORT_H
+
 #ifndef FLUXSORT_H
   #include "fluxsort.h"
-#endif
-
-#ifndef QUADSORT_CPY_H
-  #include "quadsort_cpy.h"
 #endif
 
 //#define cmp(a,b) (*(a) > *(b))
 
 //typedef int CMPFUNC (const void *a, const void *b);
 
-void wolfsort(void *array, size_t nmemb, unsigned char size, CMPFUNC *ignore)
+void wolfsort(void *array, size_t nmemb, unsigned char size, CMPFUNC *cmp)
 {
-	if (nmemb < 1024)
+	if (size != sizeof(int) || nmemb < 512)
 	{
-		return fluxsort(array, nmemb, size, ignore);
+		return fluxsort(array, nmemb, size, cmp);
 	}
 
-	if (size == sizeof(int))
+	int *swap, *pta, *pts;
+	size_t cnt;
+	unsigned int index, *stack;
+	unsigned int *count, bsize;
+	unsigned int buckets = 256;
+	unsigned int moduler = 16777216;
+
+	swap = (int *) malloc(nmemb * size);
+
+	if (swap == NULL)
 	{
-		int *swap, *pta, *pts;
-		unsigned int index, cnt, *stack;
-		unsigned int *count, bsize;
-		unsigned int buckets = 256;
-		unsigned int moduler = 16777216;
-
-		swap = (int *) malloc(nmemb * size);
-
-		if (swap == NULL)
-		{
-			return fluxsort32(array, nmemb, ignore);
-		}
-
-		while (moduler > 8096 && nmemb / buckets > 4)
-		{
-			buckets *= 2;
-			moduler /= 2;
-		}
-
-		bsize = nmemb / (buckets / 16);
-
-		count = (unsigned int *) calloc(sizeof(int), buckets);
-		stack = (unsigned int *) calloc(sizeof(int), buckets);
-
-		pta = (int *) array;
-
-		for (cnt = nmemb ; cnt ; cnt--)
-		{
-			index = (unsigned int) *pta++ / moduler;
-
-			if (++count[index] == bsize)
-			{
-				fluxsort_swap32(array, swap, nmemb, ignore);
-
-				free(swap);
-				free(stack);
-				free(count);
-
-				return;
-			}
-		}
-
-		cnt = 0;
-
-		for (index = 0 ; index < buckets ; index++)
-		{
-			stack[index] = cnt;
-
-			cnt += count[index];
-		}
-
-		pta = (int *) array;
-
-		for (cnt = nmemb ; cnt ; cnt--)
-		{
-			index = (unsigned int) *pta / moduler;
-
-			swap[stack[index]++] = *pta++;
-		}
-
-		pta = (int *) array;
-		pts = (int *) swap;
-
-		for (index = 0 ; index < buckets ; index++)
-		{
-			bsize = count[index];
-
-			if (bsize)
-			{
-				if (bsize <= 32)
-				{
-					tail_swap32_cpy(pta, pts, bsize, ignore);
-				}
-				else
-				{
-					memcpy(pta, pts, bsize * size);
-
-					fluxsort_swap32(pta, pts, bsize, ignore);
-				}
-				pta += bsize;
-				pts += bsize;
-			}
-		}
-		free(count);
-		free(swap);
-		free(stack);
-		return;
+		return fluxsort32(array, nmemb, cmp);
 	}
 
-	if (size == sizeof(long long))
+	while (buckets < 4096 * 16 && moduler > 4096 && nmemb / buckets > 4)
 	{
-		long long *swap, *pta, *pts;
-		unsigned int index, cnt, *stack;
-		unsigned int *count, bsize;
-		unsigned int buckets = 256;
-		unsigned long long moduler = 72057594037927936ULL;
-
-		swap = (long long *) malloc(nmemb * size);
-
-		if (swap == NULL)
-		{
-			return fluxsort64(array, nmemb, ignore);
-		}
-
-		while (moduler > 4294967296ULL && nmemb / buckets > 4)
-		{
-			buckets *= 2;
-			moduler /= 2;
-		}
-
-		bsize = nmemb / (buckets / 16);
-
-		count = (unsigned int *) calloc(sizeof(int), buckets);
-		stack = (unsigned int *) malloc(sizeof(int) * buckets);
-
-		pta = (long long *) array;
-
-		for (cnt = nmemb ; cnt ; cnt--)
-		{
-			index = (unsigned long long) *pta++ / moduler;
-			
-			if (++count[index] == bsize)
-			{
-				fluxsort_swap64(array, swap, nmemb, ignore);
-
-				free(swap);
-				free(stack);
-				free(count);
-				return;
-			}
-		}
-
-		cnt = 0;
-
-		for (index = 0 ; index < buckets ; index++)
-		{
-			stack[index] = cnt;
-
-			cnt += count[index];
-		}
-
-		pta = (long long *) array;
-
-		for (cnt = nmemb ; cnt ; cnt--)
-		{
-			index = (unsigned long long) *pta / moduler;
-
-			swap[stack[index]++] = *pta++;
-		}
-
-		pta = (long long *) array;
-		pts = (long long *) swap;
-
-		for (index = 0 ; index < buckets ; index++)
-		{
-			bsize = count[index];
-
-			if (bsize)
-			{
-				if (bsize <= 16)
-				{
-					tail_swap64_cpy(pta, pts, bsize, ignore);
-				}
-				else
-				{
-					memcpy(pta, pts, bsize * size);
-
-					fluxsort_swap64(pta, pts, bsize, ignore);
-				}
-				pta += bsize;
-				pts += bsize;
-			}
-
-		}
-		free(count);
-		free(swap);
-		free(stack);
-		return;
+		buckets *= 2;
+		moduler /= 2;
 	}
 
-//	assert(size == sizeof(int) || size == sizeof(long long));
+	bsize = nmemb / (buckets / 16);
 
-	fluxsort(array, nmemb, size, ignore);
+	count = (unsigned int *) calloc(sizeof(int), buckets);
+	stack = (unsigned int *) calloc(sizeof(int), buckets);
+
+	pta = (int *) array;
+
+	for (cnt = nmemb ; cnt ; cnt--)
+	{
+		index = (unsigned int) *pta++ / moduler;
+
+		if (++count[index] == bsize)
+		{
+			fluxsort_swap32(array, swap, nmemb, nmemb, cmp);
+
+			free(swap);
+			free(stack);
+			free(count);
+
+			return;
+		}
+	}
+
+	cnt = 0;
+
+	for (index = 0 ; index < buckets ; index++)
+	{
+		stack[index] = cnt;
+
+		cnt += count[index];
+	}
+
+	pta = (int *) array;
+
+	for (cnt = nmemb ; cnt ; cnt--)
+	{
+		index = (unsigned int) *pta / moduler;
+
+		swap[stack[index]++] = *pta++;
+	}
+
+	pta = (int *) array;
+	pts = (int *) swap;
+
+	for (index = 0 ; index < buckets ; index++)
+	{
+		bsize = count[index];
+
+		if (bsize)
+		{
+			memcpy(pta, pts, bsize * size);
+
+			fluxsort_swap32(pta, pts, bsize, bsize, cmp);
+
+			pta += bsize;
+			pts += bsize;
+		}
+	}
+	free(count);
+	free(swap);
+	free(stack);
+	return;
 }
+#endif

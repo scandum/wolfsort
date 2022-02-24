@@ -26,20 +26,20 @@
 #ifndef GRIDSORT_H
 #define GRIDSORT_H
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <assert.h>
-#include <errno.h>
+//#define cmp(a,b) (*(a) > *(b))
 
 #ifndef QUADSORT_H
   #include "quadsort.h"
 #endif
 
-//#define cmp(a,b) (*(a) > *(b))
+#include <stdlib.h>
+#include <stdio.h>
+#include <assert.h>
+#include <errno.h>
 
 typedef int CMPFUNC (const void *a, const void *b);
 
-#define BSC_X 64
+#define BSC_X 32
 #define BSC_Y 2
 
 size_t  BSC_Z;

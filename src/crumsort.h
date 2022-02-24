@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2014-2021 Igor van den Hoven ivdhoven@gmail.com
+	Copyright (C) 2014-2022 Igor van den Hoven ivdhoven@gmail.com
 */
 
 /*
@@ -24,11 +24,13 @@
 */
 
 /*
-	fluxsort 1.1.4.3
+	crumsort 1.1.5.2
 */
 
-#ifndef FLUXSORT_H
-#define FLUXSORT_H
+#ifndef CRUMSORT_H
+#define CRUMSORT_H
+
+//#define cmp(a,b) (*(a) > *(b))
 
 #ifndef QUADSORT_H
   #include "quadsort.h"
@@ -60,7 +62,7 @@ typedef int CMPFUNC (const void *a, const void *b);
 #define FUNC(NAME) NAME##8
 #define STRUCT(NAME) struct NAME##8
 
-#include "fluxsort.c"
+#include "crumsort.c"
 
 //////////////////////////////////////////////////////////
 //┌────────────────────────────────────────────────────┐//
@@ -81,7 +83,7 @@ typedef int CMPFUNC (const void *a, const void *b);
 #define FUNC(NAME) NAME##16
 #define STRUCT(NAME) struct NAME##16
 
-#include "fluxsort.c"
+#include "crumsort.c"
 
 //////////////////////////////////////////////////////////
 // ┌───────────────────────────────────────────────────┐//
@@ -102,7 +104,7 @@ typedef int CMPFUNC (const void *a, const void *b);
 #define FUNC(NAME) NAME##32
 #define STRUCT(NAME) struct NAME##32
 
-#include "fluxsort.c"
+#include "crumsort.c"
 
 //////////////////////////////////////////////////////////
 // ┌───────────────────────────────────────────────────┐//
@@ -123,7 +125,7 @@ typedef int CMPFUNC (const void *a, const void *b);
 #define FUNC(NAME) NAME##64
 #define STRUCT(NAME) struct NAME##64
 
-#include "fluxsort.c"
+#include "crumsort.c"
 
 //////////////////////////////////////////////////////////
 //┌────────────────────────────────────────────────────┐//
@@ -144,7 +146,7 @@ typedef int CMPFUNC (const void *a, const void *b);
 #define FUNC(NAME) NAME##128
 #define STRUCT(NAME) struct NAME##128
 
-#include "fluxsort.c"
+#include "crumsort.c"
 
 //////////////////////////////////////////////////////////////////////////
 //┌────────────────────────────────────────────────────────────────────┐//
@@ -157,7 +159,7 @@ typedef int CMPFUNC (const void *a, const void *b);
 //└────────────────────────────────────────────────────────────────────┘//
 //////////////////////////////////////////////////////////////////////////
 
-void fluxsort(void *array, size_t nmemb, size_t size, CMPFUNC *cmp)
+void crumsort(void *array, size_t nmemb, size_t size, CMPFUNC *cmp)
 {
 	if (nmemb < 2)
 	{
@@ -167,19 +169,19 @@ void fluxsort(void *array, size_t nmemb, size_t size, CMPFUNC *cmp)
 	switch (size)
 	{
 		case sizeof(char):
-			return fluxsort8(array, nmemb, cmp);
+			return crumsort8(array, nmemb, cmp);
 
 		case sizeof(short):
-			return fluxsort16(array, nmemb, cmp);
+			return crumsort16(array, nmemb, cmp);
 
 		case sizeof(int):
-			return fluxsort32(array, nmemb, cmp);
+			return crumsort32(array, nmemb, cmp);
 
 		case sizeof(long long):
-			return fluxsort64(array, nmemb, cmp);
+			return crumsort64(array, nmemb, cmp);
 
 		case sizeof(long double):
-			return fluxsort128(array, nmemb, cmp);
+			return crumsort128(array, nmemb, cmp);
 
 		default:
 			return assert(size == sizeof(char) || size == sizeof(short) || size == sizeof(int) || size == sizeof(long long) || size == sizeof(long double));
