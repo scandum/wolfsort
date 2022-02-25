@@ -55,7 +55,7 @@ Crumsort is a hybrid in-place unstable adaptive quick / rotate merge sort.
 
 Quadsort
 --------
-Quadsort is an adaptive mergesort.
+Quadsort is an adaptive mergesort. It supports rotations as a fall-back to sort in-place.
 
 Gridsort
 --------
@@ -64,6 +64,10 @@ Gridsort is a stable comparison sort which stores data in a 2 dimensional self-b
 Fluxsort
 --------
 Fluxsort is a hybrid stable branchless out-of-place quick / merge sort.
+
+Pdqsort
+-------
+Pdqsort is a hybrid unstable branchless introsort. It serves as a reference for the performance of a relatively pure quicksort.
 
 Big O
 -----
