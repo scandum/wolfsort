@@ -66,7 +66,8 @@ void FUNC(unguarded_insert)(VAR *array, size_t offset, size_t nmemb, CMPFUNC *cm
 			}
 			while (cmp(pta, &key) > 0);
 
-			*end = key;
+			end[0] = end[1];
+			end[1] = key;
 		}
 		x = cmp(end, end + 1) > 0; y = !x; key = end[y]; end[0] = end[x]; end[1] = key;
 	}
