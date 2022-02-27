@@ -7,8 +7,8 @@ Why a hybrid?
 -------------
 While an adaptive merge sort is very fast at sorting ordered data, its inability to effectively
 partition is its greatest weakness. Radix sort on the other hand is unable to take advantage of
-sorted data. While quicksort is fast at partitioning, a radix counting sort is faster on
-medium-sized arrays in the 1K - 1M element range.
+sorted data. While quicksort is fast at partitioning, a radix sort is faster on medium-sized
+arrays in the 1K - 1M element range.
 
 Fluxsort
 --------
@@ -16,22 +16,39 @@ Wolfsort uses [fluxsort](https://github.com/scandum/fluxsort "fluxsort") for sor
 arrays. Fluxsort is a stable hybrid quicksort / mergesort which sorts random data 33% faster than
 merge sort, while ordered data is sorted up to an order of magnitude faster.
 
+Setting the bucket size
+-----------------------
+Wolfsort operates like a typical radix sort by defaulting to 256 buckets and dividing each unsigned
+32 bit integer by 16777216.
+
+For optimal performance wolfsort needs to end up with between 1 and 4 elements per bucket, so the
+bucket size is increased until the average bucket holds 2 or 3 elements. However, the buckets should
+remain in the L1 cache, so the growth is stopped when the number of buckets reaches 65536.
+
+This sets the optimal range for wolfsort between 2 * 256 (512) and 4 * 65536 (262144) elements. Beyond
+the optimal range performance will degrade steadily. Once the average bucket size reaches the threshold
+of 18 elements (1179648 total elements) the sort becomes less optimal than quicksort, though it retains
+a computational advantage for a little while longer.
+
 Detecting whether the array is worth partitioning
 -------------------------------------------------
-Wolfsort operates like a typical radix sort by creating 256 buckets and dividing each unsigned
-32 bit integer by 16777216. Without any optimizations this would multiply the memory overhead
-by 256 times. Wolfsort solves this problem by running over the data once to find out the final
-size of each bucket, it then only needs n auxiliary memory and perform one more run
-to finish partitioning.
+Without any optimizations having 256 buckets would multiply the memory overhead by 256 times. Wolfsort
+solves this problem by performing a linear scan, running over the data once to find out the total
+number of elements per bucket, it then only needs n auxiliary memory and perform one more run to
+finish partitioning.
 
-If the bucket distribution is sub-optimal the radix sort is aborted and fluxsort is ran instead.
-While this may seem wasteful it doesn't take much time in practice.
+During the linear scan wolfsort checks if the bucket distribution is sub-optimal. If that's the case
+the linear scan is aborted and fluxsort is ran instead. While this may seem wasteful it doesn't take
+much time in practice.
 
-Partition in a way that is beneficial to comparison sorts
----------------------------------------------------------
-Because this approach is the equivalent of an MSD Radix sort the 256 buckets are
-in order once partitioning completes. The next step is to sort the content of each bucket
-using fluxsort and wolfsort will be finished.
+Small number sorting
+--------------------
+Since wolfsort uses auxiliary memory each partition is stable once partitioning completes. The next
+step is to sort the content of each bucket using fluxsort. If the number of elements in a bucket is
+below 32 fluxsort defaults to quadsort, which is highly optimized for sorting small arrays using a
+combination of branchless parity merges and twice-unguarded insertion.
+
+Once each bucket is sorted wolfsort is finished.
 
 Memory overhead
 ---------------
@@ -62,7 +79,7 @@ Quadsort is an adaptive mergesort. It supports rotations as a fall-back to sort 
 
 Gridsort
 --------
-Gridsort is a stable comparison sort which stores data in a 2 dimensional self-balancing grid.
+Gridsort is a stable comparison sort which stores data in a 2 dimensional self-balancing grid. It sorts data in n log n comparisons and n moves.
 
 Fluxsort
 --------
@@ -100,7 +117,7 @@ fluxsort vs gridsort vs quadsort vs wolfsort on 100K elements
 -------------------------------------------------------------
 The following benchmark was on WSL gcc version 7.4.0 (Ubuntu 7.4.0-1ubuntu1~18.04.1).
 The source code was compiled using g++ -O3 -fpermissive bench.c. All comparisons are inlined through the cmp macro.
-Each test was ran 100 times with the best run and average reported.
+A table with the best and average time in seconds can be uncollapsed below the bar graph.
 
 ![Graph](/images/graph1.png)
 
@@ -249,7 +266,7 @@ blitsort vs crumsort vs pdqsort vs wolfsort on 100K elements
 -------------------------------------------------------------
 The following benchmark was on WSL gcc version 7.4.0 (Ubuntu 7.4.0-1ubuntu1~18.04.1).
 The source code was compiled using g++ -O3 -fpermissive bench.c. All comparisons are inlined through the cmp macro.
-Each test was ran 100 times with the best run and average reported.
+A table with the best and average time in seconds can be uncollapsed below the bar graph.
 
 Blitsort uses 512 elements of auxiliary memory, crumsort 512, pdqsort 64, and wolfsort 100000.
 ![Graph](/images/graph3.png)
