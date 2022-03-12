@@ -67,27 +67,27 @@ I'll briefly mention other sorting algorithms listed in the benchmark code / gra
 
 Blitsort
 --------
-Blitsort is a hybrid in-place stable adaptive rotate quick / merge sort.
+[Blitsort](https://github.com/scandum/blitsort) is a hybrid in-place stable adaptive rotate quick / merge sort.
 
 Crumsort
 --------
-Crumsort is a hybrid in-place unstable adaptive quick / rotate merge sort.
+[Crumsort](https://github.com/scandum/crumsort) is a hybrid in-place unstable adaptive quick / rotate merge sort.
 
 Quadsort
 --------
-Quadsort is an adaptive mergesort. It supports rotations as a fall-back to sort in-place.
+[Quadsort](https://github.com/scandum/quadsort) is an adaptive mergesort. It supports rotations as a fall-back to sort in-place.
 
 Gridsort
 --------
-Gridsort is a stable comparison sort which stores data in a 2 dimensional self-balancing grid. It sorts data in n log n comparisons and n moves.
+[Gridsort](https://github.com/scandum/gridsort) is a stable comparison sort which stores data in a 2 dimensional self-balancing grid. It sorts data in n log n comparisons and n moves.
 
 Fluxsort
 --------
-Fluxsort is a hybrid stable branchless out-of-place quick / merge sort.
+[Fluxsort](https://github.com/scandum/fluxsort) is a hybrid stable branchless out-of-place quick / merge sort.
 
 Pdqsort
 -------
-Pdqsort is a hybrid unstable branchless introsort. It serves as a reference for the performance of a relatively pure quicksort.
+[Pdqsort](https://github.com/orlp/pdqsort) is a hybrid unstable branchless introsort. It serves as a reference for the performance of a relatively pure quicksort.
 
 Big O
 -----
