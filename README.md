@@ -346,6 +346,8 @@ Blitsort uses 512 elements of auxiliary memory, crumsort 512, pdqsort 64, and wo
 ![Graph](/images/graph4.png)
 <details><summary><b>data table</b></summary>
 
+|      Name |    Items | Type |     Best |  Average |  Compares | Samples |     Distribution |
+| --------- | -------- | ---- | -------- | -------- | --------- | ------- | ---------------- |
 |  blitsort | 10000000 |   32 | 0.431147 | 0.446532 |         1 |      10 |     random order |
 |  crumsort | 10000000 |   32 | 0.235650 | 0.239112 |         1 |      10 |     random order |
 |   pdqsort | 10000000 |   32 | 0.341341 | 0.343518 |         1 |      10 |     random order |
