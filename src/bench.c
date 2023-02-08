@@ -43,13 +43,16 @@
 
 #define cmp(a,b) (*(a) > *(b)) // uncomment for fast primitive comparisons
 
-char *sorts[] = { "*", "fluxsort", "gridsort", "quadsort", "wolfsort", "rhsort" };
+char *sorts[] = { "*", "blitsort", "crumsort", "fluxsort", "gridsort", "quadsort", "wolfsort" };
 
 #if __has_include("blitsort.h")
   #include "blitsort.h" // curl "https://raw.githubusercontent.com/scandum/blitsort/master/src/blitsort.{c,h}" -o "blitsort.#1"
 #endif
 #if __has_include("crumsort.h")
   #include "crumsort.h" // curl "https://raw.githubusercontent.com/scandum/crumsort/master/src/crumsort.{c,h}" -o "crumsort.#1"
+#endif
+#if __has_include("dripsort.h")
+  #include "dripsort.h" // curl "https://raw.githubusercontent.com/scandum/wolfsort/master/src/dripsort.{c,h}" -o "dripsort.#1"
 #endif
 #if __has_include("flowsort.h")
   #include "flowsort.h"
@@ -70,11 +73,12 @@ char *sorts[] = { "*", "fluxsort", "gridsort", "quadsort", "wolfsort", "rhsort" 
   #include "quadsort.h" // curl "https://raw.githubusercontent.com/scandum/quadsort/master/src/quadsort.{c,h}" -o "quadsort.#1"
 #endif
 #if __has_include("skipsort.h")
-  #include "skipsort.h" // curl "https://raw.githubusercontent.com/scandum/skipsort/master/src/skipsort.{c,h}" -o "gridsort.#1"
+  #include "skipsort.h"
 #endif
 #if __has_include("wolfsort.h")
   #include "wolfsort.h" // curl "https://raw.githubusercontent.com/scandum/wolfsort/master/src/wolfsort.{c,h}" -o "wolfsort.#1"
 #endif
+#include "dripsort.h"
 
 #if __has_include("rhsort.c")
     #define RHSORT_C
@@ -95,8 +99,8 @@ char *sorts[] = { "*", "fluxsort", "gridsort", "quadsort", "wolfsort", "rhsort" 
   #endif
 #endif
 
-//#define SKIP_STRINGS
-//#define SKIP_DOUBLES
+#define SKIP_STRINGS
+#define SKIP_DOUBLES
 //#define SKIP_LONGS
 
 //typedef int CMPFUNC (const void *a, const void *b);
@@ -351,7 +355,6 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 #ifdef WOLFSORT_H
 				case 'w' + 'o' * 32 + 'l' * 1024: wolfsort(array, max, size, cmpf); break;
 #endif
-
 				case 'q' + 's' * 32 + 'o' * 1024: qsort(array, max, size, cmpf); break;
 
 #ifdef RHSORT_C
@@ -597,7 +600,7 @@ void validate()
 		memcpy(a_array, r_array, cnt * sizeof(int));
 		memcpy(v_array, r_array, cnt * sizeof(int));
 
-		quadsort(a_array, cnt, sizeof(int), cmp_int);
+		quadsort_prim(a_array, cnt, sizeof(int));
 		qsort(v_array, cnt, sizeof(int), cmp_int);
 
 		for (val = 0 ; val < cnt ; val++)
@@ -749,7 +752,7 @@ void range_test(int max, int samples, int repetitions, int seed)
 			repetitions /= 10;
 
 			memcpy(v_array, r_array, max * sizeof(int));
-			quadsort(v_array, max, sizeof(int), cmp_int);
+			quadsort_prim(v_array, max, sizeof(int));
 
 			sprintf(dist, "random %d", max);
 
@@ -783,15 +786,16 @@ void range_test(int max, int samples, int repetitions, int seed)
 	return;
 }
 
+#define VAR int
+
 int main(int argc, char **argv)
 {
 	int max = 100000;
-	int samples = 10;
+	int samples = 20;
 	int repetitions = 1;
 	int seed = 0;
-	int cnt, sum;
-	size_t mem;
-	int *a_array, *r_array, *v_array;
+	size_t cnt, mem;
+	VAR *a_array, *r_array, *v_array, sum;
 
 	if (argc >= 1 && argv[1] && *argv[1])
 	{
@@ -1037,9 +1041,9 @@ int main(int argc, char **argv)
 #endif
 	// 32 bit
 
-	a_array = (int *) malloc(max * sizeof(int));
-	r_array = (int *) malloc(mem * sizeof(int));
-	v_array = (int *) malloc(max * sizeof(int));
+	a_array = (VAR *) malloc(max * sizeof(VAR));
+	r_array = (VAR *) malloc(mem * sizeof(VAR));
+	v_array = (VAR *) malloc(max * sizeof(VAR));
 
 	int quad0 = 0;
 	int nmemb = max;
@@ -1060,7 +1064,7 @@ int main(int argc, char **argv)
 	{
 		r_array[cnt] = rand();
 	}
-	run_test(a_array, r_array, v_array, max, max, samples, repetitions, 0, "random order", sizeof(int), cmp_int);
+	run_test(a_array, r_array, v_array, max, max, samples, repetitions, 0, "random order", sizeof(VAR), cmp_int);
 
 	// random % 100
 
@@ -1068,7 +1072,7 @@ int main(int argc, char **argv)
 	{
 		r_array[cnt] = rand() % 100;
 	}
-	run_test(a_array, r_array, v_array, max, max, samples, repetitions, 0, "random % 100", sizeof(int), cmp_int);
+	run_test(a_array, r_array, v_array, max, max, samples, repetitions, 0, "random % 100", sizeof(VAR), cmp_int);
 
 	// ascending
 
@@ -1077,7 +1081,7 @@ int main(int argc, char **argv)
 		r_array[cnt] = sum; sum += rand() % 5;
 	}
 
-	run_test(a_array, r_array, v_array, max, max, samples, repetitions, 0, "ascending order", sizeof(int), cmp_int);
+	run_test(a_array, r_array, v_array, max, max, samples, repetitions, 0, "ascending order", sizeof(VAR), cmp_int);
 
 	// ascending saw
 
@@ -1086,12 +1090,12 @@ int main(int argc, char **argv)
 		r_array[cnt] = rand();
 	}
 
-	quadsort(r_array + quad0, quad1, sizeof(int), cmp_int);
-	quadsort(r_array + quad1, quad2, sizeof(int), cmp_int);
-	quadsort(r_array + half1, quad3, sizeof(int), cmp_int);
-	quadsort(r_array + span3, quad4, sizeof(int), cmp_int);
+	quadsort(r_array + quad0, quad1, sizeof(VAR), cmp_int);
+	quadsort(r_array + quad1, quad2, sizeof(VAR), cmp_int);
+	quadsort(r_array + half1, quad3, sizeof(VAR), cmp_int);
+	quadsort(r_array + span3, quad4, sizeof(VAR), cmp_int);
 
-	run_test(a_array, r_array, v_array, max, max, samples, repetitions, repetitions, "ascending saw", sizeof(int), cmp_int);
+	run_test(a_array, r_array, v_array, max, max, samples, repetitions, repetitions, "ascending saw", sizeof(VAR), cmp_int);
 
 	// pipe organ
 
@@ -1100,8 +1104,8 @@ int main(int argc, char **argv)
 		r_array[cnt] = rand();
 	}
 
-	quadsort(r_array + quad0, half1, sizeof(int), cmp_int);
-	qsort(r_array + half1, half2, sizeof(int), cmp_rev);
+	quadsort(r_array + quad0, half1, sizeof(VAR), cmp_int);
+	qsort(r_array + half1, half2, sizeof(VAR), cmp_rev);
 
 	for (cnt = half1 + 1 ; cnt < max ; cnt++)
 	{
@@ -1111,7 +1115,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-	run_test(a_array, r_array, v_array, max, max, samples, repetitions, repetitions, "pipe organ", sizeof(int), cmp_int);
+	run_test(a_array, r_array, v_array, max, max, samples, repetitions, repetitions, "pipe organ", sizeof(VAR), cmp_int);
 
 	// descending
 
@@ -1119,7 +1123,7 @@ int main(int argc, char **argv)
 	{
 		r_array[cnt] = sum; sum -= 1 + rand() % 5;
 	}
-	run_test(a_array, r_array, v_array, max, max, samples, repetitions, 0, "descending order", sizeof(int), cmp_int);
+	run_test(a_array, r_array, v_array, max, max, samples, repetitions, 0, "descending order", sizeof(VAR), cmp_int);
 
 	// descending saw
 
@@ -1128,10 +1132,10 @@ int main(int argc, char **argv)
 		r_array[cnt] = rand();
 	}
 
-	qsort(r_array + quad0, quad1, sizeof(int), cmp_rev);
-	qsort(r_array + quad1, quad2, sizeof(int), cmp_rev);
-	qsort(r_array + half1, quad3, sizeof(int), cmp_rev);
-	qsort(r_array + span3, quad4, sizeof(int), cmp_rev);
+	qsort(r_array + quad0, quad1, sizeof(VAR), cmp_rev);
+	qsort(r_array + quad1, quad2, sizeof(VAR), cmp_rev);
+	qsort(r_array + half1, quad3, sizeof(VAR), cmp_rev);
+	qsort(r_array + span3, quad4, sizeof(VAR), cmp_rev);
 
 	for (cnt = 1 ; cnt < max ; cnt++)
 	{
@@ -1143,7 +1147,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-	run_test(a_array, r_array, v_array, max, max, samples, repetitions, repetitions, "descending saw", sizeof(int), cmp_int);
+	run_test(a_array, r_array, v_array, max, max, samples, repetitions, repetitions, "descending saw", sizeof(VAR), cmp_int);
 
 
 	// random tail 25%
@@ -1152,9 +1156,9 @@ int main(int argc, char **argv)
 	{
 		r_array[cnt] = rand();
 	}
-	quadsort(r_array, span3, sizeof(int), cmp_int);
+	quadsort(r_array, span3, sizeof(VAR), cmp_int);
 
-	run_test(a_array, r_array, v_array, max, max, samples, repetitions, repetitions, "random tail", sizeof(int), cmp_int);
+	run_test(a_array, r_array, v_array, max, max, samples, repetitions, repetitions, "random tail", sizeof(VAR), cmp_int);
 
 	// random 50%
 
@@ -1162,9 +1166,9 @@ int main(int argc, char **argv)
 	{
 		r_array[cnt] = rand();
 	}
-	quadsort(r_array, half1, sizeof(int), cmp_int);
+	quadsort(r_array, half1, sizeof(VAR), cmp_int);
 
-	run_test(a_array, r_array, v_array, max, max, samples, repetitions, repetitions, "random half", sizeof(int), cmp_int);
+	run_test(a_array, r_array, v_array, max, max, samples, repetitions, repetitions, "random half", sizeof(VAR), cmp_int);
 
 	// tiles
 
@@ -1179,7 +1183,7 @@ int main(int argc, char **argv)
 			r_array[cnt] = 33554432 + cnt;
 		}
 	}
-	run_test(a_array, r_array, v_array, max, max, samples, repetitions, 0, "ascending tiles", sizeof(int), cmp_int);
+	run_test(a_array, r_array, v_array, max, max, samples, repetitions, 0, "ascending tiles", sizeof(VAR), cmp_int);
 
 	// bit-reversal
 
@@ -1187,7 +1191,7 @@ int main(int argc, char **argv)
 	{
 		r_array[cnt] = bit_reverse(cnt);
 	}
-	run_test(a_array, r_array, v_array, max, max, samples, repetitions, 0, "bit reversal", sizeof(int), cmp_int);
+	run_test(a_array, r_array, v_array, max, max, samples, repetitions, 0, "bit reversal", sizeof(VAR), cmp_int);
 
 //#define QUAD_DEBUG
 
@@ -1201,7 +1205,23 @@ int main(int argc, char **argv)
 	{
 		r_array[cnt] = rand() % 2;
 	}
-	run_test(a_array, r_array, v_array, max, max, samples, repetitions, 0, "random % 2", sizeof(int), cmp_int);
+	run_test(a_array, r_array, v_array, max, max, samples, repetitions, 0, "random % 2", sizeof(VAR), cmp_int);
+
+	// polygonal
+
+	for (sum = cnt = 0 ; cnt < mem ; cnt++)
+	{
+		r_array[cnt] = (cnt + sum); sum += cnt; sum %= 1000000; //1 << 30;
+	}
+	run_test(a_array, r_array, v_array, max, max, samples, repetitions, 0, "polygonal", sizeof(VAR), cmp_int);
+
+	// exponential
+
+	for (cnt = 0 ; cnt < mem ; cnt++)
+	{
+		r_array[cnt] = (size_t) (cnt * cnt) % 10000; //(1 << 30);
+	}
+	run_test(a_array, r_array, v_array, max, max, samples, repetitions, 0, "exponential", sizeof(VAR), cmp_int);
 
 	// random fragments -- Make array 96% sorted
 
@@ -1209,12 +1229,12 @@ int main(int argc, char **argv)
 	{
 		r_array[cnt] = rand();
 	}
-	quadsort(r_array + quad0, quad1 * 99 / 100, sizeof(int), cmp_int);
-	quadsort(r_array + quad1, quad1 * 99 / 100, sizeof(int), cmp_int);
-	quadsort(r_array + half1, quad1 * 99 / 100, sizeof(int), cmp_int);
-	quadsort(r_array + span3, quad1 * 99 / 100, sizeof(int), cmp_int);
+	quadsort(r_array + quad0, quad1 * 99 / 100, sizeof(VAR), cmp_int);
+	quadsort(r_array + quad1, quad1 * 99 / 100, sizeof(VAR), cmp_int);
+	quadsort(r_array + half1, quad1 * 99 / 100, sizeof(VAR), cmp_int);
+	quadsort(r_array + span3, quad1 * 99 / 100, sizeof(VAR), cmp_int);
 
-	run_test(a_array, r_array, v_array, max, max, samples, repetitions, repetitions, "chaos fragments", sizeof(int), cmp_int);
+	run_test(a_array, r_array, v_array, max, max, samples, repetitions, repetitions, "chaos fragments", sizeof(VAR), cmp_int);
 
 	// Make array 6% sorted, this tends to make timsort/powersort slower than fully random
 
@@ -1222,53 +1242,53 @@ int main(int argc, char **argv)
 	{
 		r_array[cnt] = rand();
 	}
-	quadsort(r_array + quad0 / 1, quad1 * 1 / 100, sizeof(int), cmp_int);
-	quadsort(r_array + quad1 / 2, quad1 * 1 / 100, sizeof(int), cmp_int);
-	quadsort(r_array + quad1 / 1, quad1 * 1 / 100, sizeof(int), cmp_int);
-	quadsort(r_array + half1 / 1, quad1 * 1 / 100, sizeof(int), cmp_int);
-	quadsort(r_array + span3 / 2, quad1 * 1 / 100, sizeof(int), cmp_int);
-	quadsort(r_array + span3 / 1, quad1 * 1 / 100, sizeof(int), cmp_int);
+	quadsort(r_array + quad0 / 1, quad1 * 1 / 100, sizeof(VAR), cmp_int);
+	quadsort(r_array + quad1 / 2, quad1 * 1 / 100, sizeof(VAR), cmp_int);
+	quadsort(r_array + quad1 / 1, quad1 * 1 / 100, sizeof(VAR), cmp_int);
+	quadsort(r_array + half1 / 1, quad1 * 1 / 100, sizeof(VAR), cmp_int);
+	quadsort(r_array + span3 / 2, quad1 * 1 / 100, sizeof(VAR), cmp_int);
+	quadsort(r_array + span3 / 1, quad1 * 1 / 100, sizeof(VAR), cmp_int);
 
-	run_test(a_array, r_array, v_array, max, max, samples, repetitions, repetitions, "order fragments", sizeof(int), cmp_int);
+	run_test(a_array, r_array, v_array, max, max, samples, repetitions, repetitions, "order fragments", sizeof(VAR), cmp_int);
 
 	// various combinations of reverse and ascending order data
 
 	for (cnt = 0 ; cnt < max ; cnt++) r_array[cnt] = rand();
-	quadsort(r_array + quad0, half1, sizeof(int), cmp_int);
-	quadsort(r_array + half1, half2, sizeof(int), cmp_int);
-	run_test(a_array, r_array, v_array, max, max, samples, repetitions, repetitions, "aaaaa aaaaa", sizeof(int), cmp_int);
+	quadsort(r_array + quad0, half1, sizeof(VAR), cmp_int);
+	quadsort(r_array + half1, half2, sizeof(VAR), cmp_int);
+	run_test(a_array, r_array, v_array, max, max, samples, repetitions, repetitions, "aaaaa aaaaa", sizeof(VAR), cmp_int);
 
 	for (cnt = 0 ; cnt < max ; cnt++) r_array[cnt] = rand();
-	quadsort(r_array + quad1 / 2, nmemb - quad1 / 2, sizeof(int), cmp_int);
-	run_test(a_array, r_array, v_array, max, max, samples, repetitions, repetitions, "raaaaaaaaaa", sizeof(int), cmp_int);
+	quadsort(r_array + quad1 / 2, nmemb - quad1 / 2, sizeof(VAR), cmp_int);
+	run_test(a_array, r_array, v_array, max, max, samples, repetitions, repetitions, "raaaaaaaaaa", sizeof(VAR), cmp_int);
 
 	for (cnt = 0 ; cnt < max ; cnt++) r_array[cnt] = rand();
-	quadsort(r_array + quad1, span2, sizeof(int), cmp_int);
-	run_test(a_array, r_array, v_array, max, max, samples, repetitions, repetitions, "rr aaaaaaaa", sizeof(int), cmp_int);
+	quadsort(r_array + quad1, span2, sizeof(VAR), cmp_int);
+	run_test(a_array, r_array, v_array, max, max, samples, repetitions, repetitions, "rr aaaaaaaa", sizeof(VAR), cmp_int);
 
 	for (cnt = 0 ; cnt < max ; cnt++) r_array[cnt] = rand();
-	quadsort(r_array + quad0, quad1, sizeof(int), cmp_int);
-	quadsort(r_array + half1, half2, sizeof(int), cmp_int);
-	run_test(a_array, r_array, v_array, max, max, samples, repetitions, repetitions, "aa rr aaaaa", sizeof(int), cmp_int);
+	quadsort(r_array + quad0, quad1, sizeof(VAR), cmp_int);
+	quadsort(r_array + half1, half2, sizeof(VAR), cmp_int);
+	run_test(a_array, r_array, v_array, max, max, samples, repetitions, repetitions, "aa rr aaaaa", sizeof(VAR), cmp_int);
 
 	for (cnt = 0 ; cnt < max ; cnt++) r_array[cnt] = rand();
-	quadsort(r_array + quad0, half1, sizeof(int), cmp_int);
-	quadsort(r_array + span3, quad4, sizeof(int), cmp_int);
-	run_test(a_array, r_array, v_array, max, max, samples, repetitions, repetitions, "aaaaa rr aa", sizeof(int), cmp_int);
+	quadsort(r_array + quad0, half1, sizeof(VAR), cmp_int);
+	quadsort(r_array + span3, quad4, sizeof(VAR), cmp_int);
+	run_test(a_array, r_array, v_array, max, max, samples, repetitions, repetitions, "aaaaa rr aa", sizeof(VAR), cmp_int);
 
 	for (cnt = 0 ; cnt < max ; cnt++) r_array[cnt] = rand();
-	quadsort(r_array + quad0, nmemb, sizeof(int), cmp_int);
-	qsort(r_array + quad0, half1, sizeof(int), cmp_rev);
-	qsort(r_array + half1, half2, sizeof(int), cmp_rev);
-	run_test(a_array, r_array, v_array, max, max, samples, repetitions, repetitions, "rrrrr rrrrr", sizeof(int), cmp_int);
+	quadsort(r_array + quad0, nmemb, sizeof(VAR), cmp_int);
+	qsort(r_array + quad0, half1, sizeof(VAR), cmp_rev);
+	qsort(r_array + half1, half2, sizeof(VAR), cmp_rev);
+	run_test(a_array, r_array, v_array, max, max, samples, repetitions, repetitions, "rrrrr rrrrr", sizeof(VAR), cmp_int);
 
 	for (cnt = 0 ; cnt < max ; cnt++) r_array[cnt] = rand();
-	quadsort(r_array + quad0, nmemb, sizeof(int), cmp_int);
-	qsort(r_array + quad0, quad1, sizeof(int), cmp_rev);
-	qsort(r_array + quad1, quad2, sizeof(int), cmp_rev);
-	qsort(r_array + half1, quad3, sizeof(int), cmp_rev);
-	qsort(r_array + span3, quad4, sizeof(int), cmp_rev);
-	run_test(a_array, r_array, v_array, max, max, samples, repetitions, repetitions, "rr rr rr rr", sizeof(int), cmp_int);
+	quadsort(r_array + quad0, nmemb, sizeof(VAR), cmp_int);
+	qsort(r_array + quad0, quad1, sizeof(VAR), cmp_rev);
+	qsort(r_array + quad1, quad2, sizeof(VAR), cmp_rev);
+	qsort(r_array + half1, quad3, sizeof(VAR), cmp_rev);
+	qsort(r_array + span3, quad4, sizeof(VAR), cmp_rev);
+	run_test(a_array, r_array, v_array, max, max, samples, repetitions, repetitions, "rr rr rr rr", sizeof(VAR), cmp_int);
 
 #endif
 

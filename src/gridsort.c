@@ -97,35 +97,72 @@ STRUCT(x_node) *FUNC(create_grid)(VAR *array, size_t nmemb, CMPFUNC *cmp)
 
 void FUNC(twin_merge_cpy)(STRUCT(x_node) *x_node, VAR *dest, STRUCT(y_node) *y_node, CMPFUNC *cmp)
 {
-	VAR *pta = y_node->z_axis1;
-	VAR *ptb = y_node->z_axis2;
+	VAR *ptl = y_node->z_axis1;
+	VAR *ptr = y_node->z_axis2;
 	size_t nmemb1 = BSC_Z;
 	size_t nmemb2 = y_node->z_size;
+	VAR *tpl = y_node->z_axis1 + nmemb1 - 1;
+	VAR *tpr = y_node->z_axis2 + nmemb2 - 1;
+	VAR *ptd = dest;
+	VAR *tpd = dest + nmemb1 + nmemb2 - 1;
+	size_t loop, x, y;
 
-	FUNC(quadsort_swap)(ptb, x_node->swap, nmemb2, nmemb2, cmp);
+	FUNC(quadsort_swap)(ptr, x_node->swap, nmemb2, nmemb2, cmp);
 
-	while (1)
+	while (tpl - ptl > 8 && tpr - ptr > 8)
 	{
-		if (cmp(pta, ptb) <= 0)
+		if (cmp(ptl + 7, ptr) <= 0)
 		{
-			*dest++ = *pta++;
-
-			if (--nmemb1 == 0)
-			{
-				do *dest++ = *ptb++; while (--nmemb2);
-				return;
-			}
+			loop = 8; do *ptd++ = *ptl++; while (--loop); continue;
 		}
-		else
+		if (cmp(ptl, ptr + 7) > 0)
 		{
-			*dest++ = *ptb++;
-
-			if (--nmemb2 == 0)
-			{
-				do *dest++ = *pta++; while (--nmemb1);
-				return;
-			}
+			loop = 8; do *ptd++ = *ptr++; while (--loop); continue;
 		}
+		if (cmp(tpl, tpr - 7) <= 0)
+		{
+			loop = 8; do *tpd-- = *tpr--; while (--loop); continue;
+		}
+		if (cmp(tpl - 7, tpr) > 0)
+		{
+			loop = 8; do *tpd-- = *tpl--; while (--loop); continue;
+		}
+		loop = 8; do
+		{
+			x = cmp(ptl, ptr) <= 0; y = !x; ptd[x] = *ptr; ptr += y; ptd[y] = *ptl; ptl += x; ptd++;
+			x = cmp(tpl, tpr) <= 0; y = !x; tpd--; tpd[x] = *tpr; tpr -= x; tpd[y] = *tpl; tpl -= y;
+		}
+		while (--loop);
+	}
+
+	while (tpl - ptl > 1 && tpr - ptr > 1)
+	{
+		if (cmp(ptl + 1, ptr) <= 0)
+		{
+			*ptd++ = *ptl++; *ptd++ = *ptl++;
+		}
+		else if (cmp(ptl, ptr + 1) > 0)
+		{
+			*ptd++ = *ptr++; *ptd++ = *ptr++;
+		}
+		else 
+		{
+			x = cmp(ptl, ptr) <= 0; y = !x; ptd[x] = *ptr; ptr += 1; ptd[y] = *ptl; ptl += 1; ptd += 2;
+			x = cmp(ptl, ptr) <= 0; y = !x; ptd[x] = *ptr; ptr += y; ptd[y] = *ptl; ptl += x; ptd++;
+		}
+	}
+
+	while (ptl <= tpl && ptr <= tpr)
+	{
+		*ptd++ = cmp(ptl, ptr) <= 0 ? *ptl++ : *ptr++;
+	}
+	while (ptl <= tpl)
+	{
+		*ptd++ = *ptl++;
+	}
+	while (ptr <= tpr)
+	{
+		*ptd++ = *ptr++;
 	}
 }
 
