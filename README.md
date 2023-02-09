@@ -1,7 +1,7 @@
 Intro
 -----
 
-This document describes a stable adaptive hybrid radix / quick / merge / drop sort named wolfsort. Dropsort gained popularity after it was reinvented as Stalin sort. A [benchmark](https://github.com/scandum/wolfsort#benchmark) is available at the bottom.
+This document describes a stable adaptive hybrid radix / quick / merge / drop sort named wolfsort. Dropsort gained popularity after it was reinvented as Stalin sort. A [benchmark](https://github.com/scandum/wolfsort#benchmark-for-wolfsort-v1154-dripsort) is available at the bottom.
 
 Why a hybrid?
 -------------
