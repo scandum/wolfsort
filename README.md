@@ -1,24 +1,49 @@
 Intro
 -----
 
-This document describes a stable adaptive hybrid radix / quicksort / merge sort named wolfsort.
+This document describes a stable adaptive hybrid radix / quick / merge / drop sort named wolfsort. Dropsort gained popularity after it was reinvented as Stalin sort. A [benchmark](https://github.com/scandum/wolfsort#benchmark) is available at the bottom.
 
 Why a hybrid?
 -------------
 While an adaptive merge sort is very fast at sorting ordered data, its inability to effectively
 partition is its greatest weakness. Radix sort on the other hand is unable to take advantage of
 sorted data. While quicksort is fast at partitioning, a radix sort is faster on medium-sized
-arrays in the 1K - 1M element range.
+arrays in the 1K - 1M element range. Dropsort in turn hybradizes surprisingly well with radix
+and sample sorts.
 
-Fluxsort
+History
+-------
+Wolfsort 1, codename: quantumsort, started out with the concept that memory is in abundance on
+modern systems. I theorized that by allocating 8n memory performance could be increased by allowing
+a radix sort to partition in one pass.
+
+Not all the memory would be used or ever accessed however, which is why I envisioned it as a type
+of poor-man's quantum computing. The extra memory only serves to simplify computations. The concept
+kind of worked, except that large memory allocations in C can be either very fast or very slow. I
+didn't investigate why.
+
+Wolfsort 2, codename: flowsort, is when I reinvented counting sort. Instead of making 1 pass and
+using extra memory to deal with fluctuations in the data, flowsort makes one pass to calculate the
+bucket sizes, then makes a second pass to neatly fill the buckets.
+
+Wolfsort 3, codename: dripsort, was inspired by the work of M. Lochbaum on [rhsort](https://github.com/mlochbaum/rhsort)
+to use a method similar to dropsort to deal with bucket overflow, and to calculate the minimum and
+maximum value to optimize for distributions with a small range of values. Dripsort once again makes
+one pass and uses around 4n memory to deal with fluctuations in the data. Compared to v1 this is a
+50% reduction in memory allocation, while at the same time significantly increasing robustness.
+
+Analyzer
 --------
-Wolfsort uses [fluxsort](https://github.com/scandum/fluxsort "fluxsort") for sorting partitioned
-arrays. Fluxsort is a stable hybrid quicksort / mergesort which sorts random data 33% faster than
-merge sort, while ordered data is sorted up to an order of magnitude faster.
+Wolfsort uses the same analyzer as [fluxsort](https://github.com/scandum/fluxsort) to sort fully
+in-order and fully reverse-order distributions in n comparisons. The array is split into 4 segments
+for which a measure of presortedness is calculated. Mostly ordered segments are sorted with
+[quadsort](https://github.com/scandum/quadsort), while mostly random segments are sorted with wolfsort.
+
+In addition, the minimum and maximum value in the distribution is obtained.
 
 Setting the bucket size
 -----------------------
-Wolfsort operates like a typical radix sort by defaulting to 256 buckets and dividing each unsigned
+Wolfsort operates like a typical lazy radix sort by defaulting to 256 buckets and dividing each unsigned
 32 bit integer by 16777216.
 
 For optimal performance wolfsort needs to end up with between 1 and 4 elements per bucket, so the
@@ -30,40 +55,67 @@ the optimal range performance will degrade steadily. Once the average bucket siz
 of 18 elements (1179648 total elements) the sort becomes less optimal than quicksort, though it retains
 a computational advantage for a little while longer.
 
-Detecting whether the array is worth partitioning
--------------------------------------------------
-Without any optimizations having 256 buckets would multiply the memory overhead by 256 times. Wolfsort
-solves this problem by performing a linear scan, running over the data once to find out the total
-number of elements per bucket, it then only needs n auxiliary memory and perform one more run to
-finish partitioning.
+By computing the minimum and maximum value in the data distribution, the number of buckets are optimized
+further to target the sweet spot.
 
-During the linear scan wolfsort checks if the bucket distribution is sub-optimal. If that's the case
-the linear scan is aborted and fluxsort is ran instead. While this may seem wasteful it doesn't take
-much time in practice.
+Dropsort
+--------
+Dropsort was first proposed as an alternative sorting algorithm by David Morgan in 2006, it makes one pass
+and is lossy. The algorithm was reinvented in 2018 as Stalin sort. The use of dropsort in
+combination with a radix sort was introduced in 2022 by rhsort (Robin Hood Sort) and was in turn inspired
+by Robin Hood Hashing.
+
+Wolfsort allocates 4n memory to allow some deviancy in the data distribution and minimize bucket overflow.
+In the case an element is too deviant and overflows the bucket, it is copied in-place to the input
+array. In near-optimal cases this results in a minimal drip, in the worst case it will result in a downpour
+of elements being copied to the input array.
+
+While a centrally planned partitioning system has its weaknesses, the worst case is mostly alleviated by using
+fluxsort on the deviant elements once partitioning finishes. Fluxsort is broadly adaptive and is often
+strong against distributions where wolfsort is weak.
 
 Small number sorting
 --------------------
-Since wolfsort uses auxiliary memory each partition is stable once partitioning completes. The next
+Since wolfsort uses auxiliary memory, each partition is stable once partitioning completes. The next
 step is to sort the content of each bucket using fluxsort. If the number of elements in a bucket is
-below 32 fluxsort defaults to quadsort, which is highly optimized for sorting small arrays using a
+below 24, fluxsort defaults to quadsort, which is highly optimized for sorting small arrays using a
 combination of branchless parity merges and twice-unguarded insertion.
 
-Once each bucket is sorted wolfsort is finished.
+Once each bucket is sorted, all that remains is merging the two distributions of compliant and deviant
+elements, and wolfsort is finished.
 
 Memory overhead
 ---------------
-Wolfsort requires O(n) memory for the partitioning process and O(sqrt n) memory for the buckets.
+Wolfsort requires 4n memory for the partitioning process and O(sqrt n) memory for the buckets.
 
-If not enough memory is available wolfsort falls back on fluxsort which requires n swap memory,
-and if that's not sufficient fluxsort falls back on quadsort which can sort in-place.
+If not enough memory is available wolfsort falls back on fluxsort, which requires exactly 1n swap memory,
+and if that's not sufficient fluxsort falls back on quadsort which can sort in-place. It is an
+option to fall back on blitsort instead of quadsort, but since this would be an a-typical case,
+and increase dependencies, I didn't implement this.
+
+64 bit integers
+---------------
+With the advent of fluxsort and crumsort the dominance of radix sorts has been pushed out of 64 bit territory. Increased memory-level-parallelism in future hardware, or algorithmic optimizations, might make radix sorts feasible again for 64 bit types.
+
+God Mode
+--------
+Wolfsort supports a cheat mode where the sort becomes unstable. This trick was taken from rhsort. Since wolfsort aspires to have some utility as a stable sort, this method is disabled by default, including in the benchmark.
+
+In the benchmark rhsort does use this optimization, but it's only relevant for the random % 100 distribution. For 32 bit random integers rhsort easily beats wolfsort without an unfair advantage.
+
+Interface
+---------
+Wolfsort uses the same interface as qsort, which is described in [man qsort](https://man7.org/linux/man-pages/man3/qsort.3p.html).
+
+Wolfsort also comes with the `wolfsort_prim(void *array, size_t nmemb, size_t size)` function to perform primitive comparisons on arrays of 32 and 64 bit integers. Nmemb is the number of elements, while size should be either `sizeof(int)` or `sizeof(long long)` for signed integers, and `sizeof(int) + 1` or `sizeof(long long) + 1` for unsigned integers. Support for the char and short types can be easily added in wolfsort.h.
+
+Wolfsort can only sort arrays of primitive integers by default, it should be able to sort tables with some minor changes, but it'll require a different interface than qsort() provides.
 
 Proof of concept
 ----------------
-Wolfsort is primarily a proof of concept for a hybrid radix / comparison sort, currently it only supports unsigned 32 bit integers.
+Wolfsort is primarily a proof of concept for a hybrid radix / comparison sort. It only supports non-negative integers.
 
-Other radix sorts of interest are [ska sort](https://github.com/skarupke/ska_sort) and [Robin Hood Sort](https://github.com/mlochbaum/rhsort).
-
-I'll briefly mention other sorting algorithms listed in the benchmark code / graphs.
+I'll briefly mention other sorting algorithms listed in the benchmark code / graphs. They can all be considered the fastest algorithms currently available in their particular class.
 
 Blitsort
 --------
@@ -75,23 +127,30 @@ Crumsort
 
 Quadsort
 --------
-[Quadsort](https://github.com/scandum/quadsort) is an adaptive mergesort. It supports rotations as a fall-back to sort in-place.
+[Quadsort](https://github.com/scandum/quadsort) is an adaptive mergesort. It supports rotations as a fall-back to sort in-place. It has very good performance when it comes to sorting tables and generally outperforms timsort.
 
 Gridsort
 --------
-[Gridsort](https://github.com/scandum/gridsort) is a stable comparison sort which stores data in a 2 dimensional self-balancing grid. It sorts data in n log n comparisons and n moves.
+[Gridsort](https://github.com/scandum/gridsort) is a stable comparison sort which stores data in a 2 dimensional self-balancing grid. It has some interesting properties and was the fastest comparison sort for random data for a brief period of time.
 
 Fluxsort
 --------
 [Fluxsort](https://github.com/scandum/fluxsort) is a hybrid stable branchless out-of-place quick / merge sort.
 
-Pdqsort
--------
-[Pdqsort](https://github.com/orlp/pdqsort) is a hybrid unstable branchless introsort. It serves as a reference for the performance of a relatively pure quicksort.
+Piposort
+[Piposort](https://github.com/scandum/piposort) is a simplified branchless quadsort with a much smaller code size and complexity while still being very fast. Piposort might be of use to people who want to port quadsort. This is a lot easier when you start out small.
+
+rhsort
+------
+[rhsort](https://github.com/mlochbaum/rhsort) is a hybrid stable out-of-place counting / radix / drop / insertion sort. It has exceptional performance on random and generic data for medium array sizes.
+
+Ska sort
+--------
+[Ska sort](https://github.com/skarupke/ska_sort) is an advanced radix sort. It offers both an in-place and out-of-place version, but since the out-of-place unstable version is not very competitive with wolfsort, I only benchmark the stable and faster ska_sort_copy variant.
 
 Big O
 -----
-```cobol
+```
                  ┌───────────────────────┐┌────────────────────┐
                  │comparisons            ││swap memory         │
 ┌───────────────┐├───────┬───────┬───────┤├──────┬──────┬──────┤┌──────┐┌─────────┐┌─────────┐┌─────────┐
@@ -105,13 +164,120 @@ Big O
 ├───────────────┤├───────┼───────┼───────┤├──────┼──────┼──────┤├──────┤├─────────┤├─────────┤├─────────┤
 │gridsort       ││n      │n log n│n log n││n     │n     │n     ││yes   ││yes      ││yes      ││yes      │
 ├───────────────┤├───────┼───────┼───────┤├──────┼──────┼──────┤├──────┤├─────────┤├─────────┤├─────────┤
-│pdqsort        ││n      │n log n│n log n││1     │1     │1     ││no    ││yes      ││semi     ││yes      │
-├───────────────┤├───────┼───────┼───────┤├──────┼──────┼──────┤├──────┤├─────────┤├─────────┤├─────────┤
 │quadsort       ││n      │n log n│n log n││1     │n     │n     ││yes   ││no       ││yes      ││yes      │
 ├───────────────┤├───────┼───────┼───────┤├──────┼──────┼──────┤├──────┤├─────────┤├─────────┤├─────────┤
-│wolfsort       ││n      │n log n│n log n││n     │n     │n     ││yes   ││yes      ││yes      ││no       │
+│wolfsort       ││n      │n log n│n log n││n     │n     │n     ││yes   ││yes      ││yes      ││hybrid   │
+├───────────────┤├───────┼───────┼───────┤├──────┼──────┼──────┤├──────┤├─────────┤├─────────┤├─────────┤
+│rhsort         ││n      │n log n│n log n││n     │n     │n     ││yes   ││yes      ││semi     ││hybrid   │
+├───────────────┤├───────┼───────┼───────┤├──────┼──────┼──────┤├──────┤├─────────┤├─────────┤├─────────┤
+│skasort_copy   ││n k    │n k    │n k    ││n     │n     │n     ││yes   ││yes      ││no       ││no       │
 └───────────────┘└───────┴───────┴───────┘└──────┴──────┴──────┘└──────┘└─────────┘└─────────┘└─────────┘
 ```
+
+Benchmark for Wolfsort v1.1.5.4 (dripsort)
+-------------------------------
+
+rhsort vs wolfsort vs ska_sort_copy on 100K elements
+----------------------------------------------------
+The following benchmark was on WSL gcc version 7.4.0 (Ubuntu 7.4.0-1ubuntu1~18.04.1) on 100,000 32 bit integers.
+The source code was compiled using g++ -O3 -fpermissive bench.c. All comparisons are inlined through the cmp macro.
+A table with the best and average time in seconds can be uncollapsed below the bar graph.
+
+![Graph](/images/radix1.png)
+
+<details><summary><b>data table</b></summary>
+
+|      Name |    Items | Type |     Best |  Average |     Loops | Samples |     Distribution |
+| --------- | -------- | ---- | -------- | -------- | --------- | ------- | ---------------- |
+|    rhsort |   100000 |   32 | 0.000680 | 0.000708 |         0 |     100 |     random order |
+|  wolfsort |   100000 |   32 | 0.000965 | 0.000983 |         0 |     100 |     random order |
+|   skasort |   100000 |   32 | 0.000617 | 0.000622 |         0 |     100 |     random order |
+|           |          |      |          |          |           |         |                  |
+|    rhsort |   100000 |   32 | 0.000119 | 0.000122 |         0 |     100 |     random % 100 |
+|  wolfsort |   100000 |   32 | 0.000370 | 0.000374 |         0 |     100 |     random % 100 |
+|   skasort |   100000 |   32 | 0.000752 | 0.000759 |         0 |     100 |     random % 100 |
+|           |          |      |          |          |           |         |                  |
+|    rhsort |   100000 |   32 | 0.000301 | 0.000322 |         0 |     100 |  ascending order |
+|  wolfsort |   100000 |   32 | 0.000088 | 0.000090 |         0 |     100 |  ascending order |
+|   skasort |   100000 |   32 | 0.000691 | 0.000713 |         0 |     100 |  ascending order |
+|           |          |      |          |          |           |         |                  |
+|    rhsort |   100000 |   32 | 0.000592 | 0.000618 |         0 |     100 |    ascending saw |
+|  wolfsort |   100000 |   32 | 0.000371 | 0.000382 |         0 |     100 |    ascending saw |
+|   skasort |   100000 |   32 | 0.000617 | 0.000650 |         0 |     100 |    ascending saw |
+|           |          |      |          |          |           |         |                  |
+|    rhsort |   100000 |   32 | 0.000572 | 0.000583 |         0 |     100 |       pipe organ |
+|  wolfsort |   100000 |   32 | 0.000248 | 0.000250 |         0 |     100 |       pipe organ |
+|   skasort |   100000 |   32 | 0.000618 | 0.000625 |         0 |     100 |       pipe organ |
+|           |          |      |          |          |           |         |                  |
+|    rhsort |   100000 |   32 | 0.000396 | 0.000410 |         0 |     100 | descending order |
+|  wolfsort |   100000 |   32 | 0.000098 | 0.000099 |         0 |     100 | descending order |
+|   skasort |   100000 |   32 | 0.000669 | 0.000680 |         0 |     100 | descending order |
+|           |          |      |          |          |           |         |                  |
+|    rhsort |   100000 |   32 | 0.000593 | 0.000603 |         0 |     100 |   descending saw |
+|  wolfsort |   100000 |   32 | 0.000468 | 0.000476 |         0 |     100 |   descending saw |
+|   skasort |   100000 |   32 | 0.000620 | 0.000658 |         0 |     100 |   descending saw |
+|           |          |      |          |          |           |         |                  |
+|    rhsort |   100000 |   32 | 0.000614 | 0.000638 |         0 |     100 |      random tail |
+|  wolfsort |   100000 |   32 | 0.000463 | 0.000478 |         0 |     100 |      random tail |
+|   skasort |   100000 |   32 | 0.000618 | 0.000639 |         0 |     100 |      random tail |
+|           |          |      |          |          |           |         |                  |
+|    rhsort |   100000 |   32 | 0.000643 | 0.000677 |         0 |     100 |      random half |
+|  wolfsort |   100000 |   32 | 0.000668 | 0.000691 |         0 |     100 |      random half |
+|   skasort |   100000 |   32 | 0.000618 | 0.000646 |         0 |     100 |      random half |
+|           |          |      |          |          |           |         |                  |
+|    rhsort |   100000 |   32 | 0.002240 | 0.002316 |         0 |     100 |  ascending tiles |
+|  wolfsort |   100000 |   32 | 0.000684 | 0.000703 |         0 |     100 |  ascending tiles |
+|   skasort |   100000 |   32 | 0.001109 | 0.001131 |         0 |     100 |  ascending tiles |
+|           |          |      |          |          |           |         |                  |
+|    rhsort |   100000 |   32 | 0.000813 | 0.000849 |         0 |     100 |     bit reversal |
+|  wolfsort |   100000 |   32 | 0.000760 | 0.000848 |         0 |     100 |     bit reversal |
+|   skasort |   100000 |   32 | 0.000753 | 0.000767 |         0 |     100 |     bit reversal |
+
+</details>
+
+The following benchmark was on WSL 2 gcc version 7.5.0 (Ubuntu 7.5.0-3ubuntu1~18.04).
+The source code was compiled using `g++ -O3 -w -fpermissive bench.c`. It measures the performance on random data with array sizes
+ranging from 10 to 10,000,000. It's generated by running the benchmark using 10000000 0 0 as the argument. The benchmark is weighted, meaning the number of repetitions
+halves each time the number of items doubles. A table with the best and average time in seconds can be uncollapsed below the bar graph.
+
+![Graph](/images/radix2.png)
+
+<details><summary><b>data table</b></summary>
+
+|      Name |    Items | Type |     Best |  Average |  Compares | Samples |     Distribution |
+| --------- | -------- | ---- | -------- | -------- | --------- | ------- | ---------------- |
+|    rhsort |       10 |   32 | 0.131513 | 0.134111 |       0.0 |      10 |        random 10 |
+|  wolfsort |       10 |   32 | 0.051008 | 0.051118 |       0.0 |      10 |        random 10 |
+|   skasort |       10 |   32 | 0.100410 | 0.105244 |       0.0 |      10 |        random 10 |
+|           |          |      |          |          |           |         |                  |
+|    rhsort |      100 |   32 | 0.067045 | 0.067871 |       0.0 |      10 |       random 100 |
+|  wolfsort |      100 |   32 | 0.110760 | 0.111562 |       0.0 |      10 |       random 100 |
+|   skasort |      100 |   32 | 0.232155 | 0.232376 |       0.0 |      10 |       random 100 |
+|           |          |      |          |          |           |         |                  |
+|    rhsort |     1000 |   32 | 0.054274 | 0.054540 |       0.0 |      10 |      random 1000 |
+|  wolfsort |     1000 |   32 | 0.095062 | 0.095328 |       0.0 |      10 |      random 1000 |
+|   skasort |     1000 |   32 | 0.056759 | 0.056964 |       0.0 |      10 |      random 1000 |
+|           |          |      |          |          |           |         |                  |
+|    rhsort |    10000 |   32 | 0.055843 | 0.056260 |       0.0 |      10 |     random 10000 |
+|  wolfsort |    10000 |   32 | 0.092480 | 0.092637 |       0.0 |      10 |     random 10000 |
+|   skasort |    10000 |   32 | 0.058090 | 0.058317 |       0.0 |      10 |     random 10000 |
+|           |          |      |          |          |           |         |                  |
+|    rhsort |   100000 |   32 | 0.069535 | 0.070230 |       0.0 |      10 |    random 100000 |
+|  wolfsort |   100000 |   32 | 0.098330 | 0.098880 |       0.0 |      10 |    random 100000 |
+|   skasort |   100000 |   32 | 0.062893 | 0.063044 |       0.0 |      10 |    random 100000 |
+|           |          |      |          |          |           |         |                  |
+|    rhsort |  1000000 |   32 | 0.178629 | 0.184670 |       0.0 |      10 |   random 1000000 |
+|  wolfsort |  1000000 |   32 | 0.150146 | 0.152040 |       0.0 |      10 |   random 1000000 |
+|   skasort |  1000000 |   32 | 0.068434 | 0.069190 |       0.0 |      10 |   random 1000000 |
+|           |          |      |          |          |           |         |                  |
+|    rhsort | 10000000 |   32 | 0.373823 | 0.417923 |         0 |      10 |  random 10000000 |
+|  wolfsort | 10000000 |   32 | 0.427918 | 0.428926 |         0 |      10 |  random 10000000 |
+|   skasort | 10000000 |   32 | 0.114597 | 0.115324 |         0 |      10 |  random 10000000 |
+
+</details>
+
+Benchmark for Wolfsort v1.1.5.3 (flowsort)
+-------------------------------
 
 fluxsort vs gridsort vs quadsort vs wolfsort on 100K elements
 -------------------------------------------------------------
