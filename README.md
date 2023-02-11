@@ -1,21 +1,24 @@
 Intro
 -----
 
-This document describes a stable adaptive hybrid radix / quick / merge / drop sort named wolfsort. Dropsort gained popularity after it was reinvented as Stalin sort. A [benchmark](https://github.com/scandum/wolfsort#benchmark-for-wolfsort-v1154-dripsort) is available at the bottom.
+This document describes a stable adaptive hybrid bucket / quick / merge / drop sort named wolfsort.
+The bucket sort, forming the core of wolfsort, is not a comparison sort, so wolfsort can be considered
+as a member of the radix-sort family. Quicksort and mergesort are well known. Dropsort gained popularity
+after it was reinvented as Stalin sort. A [benchmark](https://github.com/scandum/wolfsort#benchmark-for-wolfsort-v1154-dripsort) is available at the bottom.
 
 Why a hybrid?
 -------------
 While an adaptive merge sort is very fast at sorting ordered data, its inability to effectively
 partition is its greatest weakness. Radix sort on the other hand is unable to take advantage of
-sorted data. While quicksort is fast at partitioning, a radix sort is faster on medium-sized
-arrays in the 1K - 1M element range. Dropsort in turn hybradizes surprisingly well with radix
+sorted data. While quicksort is fast at partitioning, a bucket sort is faster on medium-sized
+arrays in the 1K - 1M element range. Dropsort in turn hybridizes surprisingly well with bucket
 and sample sorts.
 
 History
 -------
 Wolfsort 1, codename: quantumsort, started out with the concept that memory is in abundance on
 modern systems. I theorized that by allocating 8n memory performance could be increased by allowing
-a radix sort to partition in one pass.
+a bucket sort to partition in one pass.
 
 Not all the memory would be used or ever accessed however, which is why I envisioned it as a type
 of poor-man's quantum computing. The extra memory only serves to simplify computations. The concept
@@ -43,16 +46,13 @@ In addition, the minimum and maximum value in the distribution is obtained.
 
 Setting the bucket size
 -----------------------
-Wolfsort operates like a typical lazy radix sort by defaulting to 256 buckets and dividing each unsigned
-32 bit integer by 16777216.
+For optimal performance wolfsort needs to have at least 8 buckets, end up with between 1 and 16 elements
+per bucket, so the bucket size is set to hold 8 elements on average. However, the buckets should remain
+in the L1 cache, so the maximum number of buckets is set at 65536.
 
-For optimal performance wolfsort needs to end up with between 1 and 4 elements per bucket, so the
-bucket size is increased until the average bucket holds 2 or 3 elements. However, the buckets should
-remain in the L1 cache, so the growth is stopped when the number of buckets reaches 65536.
-
-This sets the optimal range for wolfsort between 2 * 256 (512) and 4 * 65536 (262144) elements. Beyond
+This sets the optimal range for wolfsort between 8 * 8 (64) and 8 * 65536 (524,288) elements. Beyond
 the optimal range performance will degrade steadily. Once the average bucket size reaches the threshold
-of 18 elements (1179648 total elements) the sort becomes less optimal than quicksort, though it retains
+of 18 elements (1,179,648 total elements) the sort becomes less optimal than quicksort, though it retains
 a computational advantage for a little while longer.
 
 By computing the minimum and maximum value in the data distribution, the number of buckets are optimized
@@ -61,9 +61,8 @@ further to target the sweet spot.
 Dropsort
 --------
 Dropsort was first proposed as an alternative sorting algorithm by David Morgan in 2006, it makes one pass
-and is lossy. The algorithm was reinvented in 2018 as Stalin sort. The use of dropsort in
-combination with a radix sort was introduced in 2022 by rhsort (Robin Hood Sort) and was in turn inspired
-by Robin Hood Hashing.
+and is lossy. The algorithm was reinvented in 2018 as Stalin sort. The concept of dropping hash entries was
+independently developed by Marshall Lochbaum in 2018 and used in his 2022 release of rhsort (Robin Hood Sort).
 
 Wolfsort allocates 4n memory to allow some deviancy in the data distribution and minimize bucket overflow.
 In the case an element is too deviant and overflows the bucket, it is copied in-place to the input
@@ -71,8 +70,10 @@ array. In near-optimal cases this results in a minimal drip, in the worst case i
 of elements being copied to the input array.
 
 While a centrally planned partitioning system has its weaknesses, the worst case is mostly alleviated by using
-fluxsort on the deviant elements once partitioning finishes. Fluxsort is broadly adaptive and is often
+fluxsort on the deviant elements once partitioning finishes. Fluxsort is adaptive and is generally
 strong against distributions where wolfsort is weak.
+
+The overall performance gain from incorporating dropsort into wolfsort is approximately 20%.
 
 Small number sorting
 --------------------
@@ -109,11 +110,11 @@ Wolfsort uses the same interface as qsort, which is described in [man qsort](htt
 
 Wolfsort also comes with the `wolfsort_prim(void *array, size_t nmemb, size_t size)` function to perform primitive comparisons on arrays of 32 and 64 bit integers. Nmemb is the number of elements, while size should be either `sizeof(int)` or `sizeof(long long)` for signed integers, and `sizeof(int) + 1` or `sizeof(long long) + 1` for unsigned integers. Support for the char and short types can be easily added in wolfsort.h.
 
-Wolfsort can only sort arrays of primitive integers by default, it should be able to sort tables with some minor changes, but it'll require a different interface than qsort() provides.
+Wolfsort can only sort arrays of primitive integers by default. Wolfsort should be able to sort tables with some minor changes, but it'll require a different interface than qsort() provides.
 
 Proof of concept
 ----------------
-Wolfsort is primarily a proof of concept for a hybrid radix / comparison sort. It only supports non-negative integers.
+Wolfsort is primarily a proof of concept for a hybrid bucket / comparison sort. It only supports non-negative integers.
 
 I'll briefly mention other sorting algorithms listed in the benchmark code / graphs. They can all be considered the fastest algorithms currently available in their particular class.
 
@@ -146,7 +147,7 @@ rhsort
 
 Ska sort
 --------
-[Ska sort](https://github.com/skarupke/ska_sort) is an advanced radix sort. It offers both an in-place and out-of-place version, but since the out-of-place unstable version is not very competitive with wolfsort, I only benchmark the stable and faster ska_sort_copy variant.
+[Ska sort](https://github.com/skarupke/ska_sort) is an advanced radix sort that can sort strings and floats as well. It offers both an in-place and out-of-place version, but since the out-of-place unstable version is not very competitive with wolfsort, I only benchmark the stable and faster ska_sort_copy variant.
 
 Big O
 -----
