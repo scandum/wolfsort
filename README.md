@@ -9,7 +9,7 @@ after it was reinvented as Stalin sort. A [benchmark](https://github.com/scandum
 Why a hybrid?
 -------------
 While an adaptive merge sort is very fast at sorting ordered data, its inability to effectively
-partition is its greatest weakness. Radix sort on the other hand is unable to take advantage of
+partition is its greatest weakness. A radix-like bucket sort, on the other hand, is unable to take advantage of
 sorted data. While quicksort is fast at partitioning, a bucket sort is faster on medium-sized
 arrays in the 1K - 1M element range. Dropsort in turn hybridizes surprisingly well with bucket
 and sample sorts.
@@ -24,6 +24,9 @@ Not all the memory would be used or ever accessed however, which is why I envisi
 of poor-man's quantum computing. The extra memory only serves to simplify computations. The concept
 kind of worked, except that large memory allocations in C can be either very fast or very slow. I
 didn't investigate why.
+
+I also learned people don't like it when you use the term quantum computing outside of the proper
+context, or perhaps they were upset about wolfsort's voracious appetite for memory. Hence it was named.
 
 Wolfsort 2, codename: flowsort, is when I reinvented counting sort. Instead of making 1 pass and
 using extra memory to deal with fluctuations in the data, flowsort makes one pass to calculate the
