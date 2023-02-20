@@ -24,7 +24,7 @@
 */
 
 /*
-	wolfsort 1.1.5.4
+	wolfsort 1.2.1.1
 */
 
 #ifndef WOLFSORT_H

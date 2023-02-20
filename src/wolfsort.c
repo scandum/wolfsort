@@ -24,7 +24,7 @@
 */
 
 /*
-	wolfsort 1.1.5.4
+	wolfsort 1.2.1.1
 */
 
 
@@ -113,6 +113,8 @@ inline void FUNC(wolf_unguarded_insert)(VAR *array, size_t offset, size_t nmemb,
 	}
 }
 
+void FUNC(wolfsort)(VAR *array, size_t nmemb, CMPFUNC *cmp);
+
 void FUNC(wolf_partition)(VAR *array, VAR *aux, size_t aux_size, size_t nmemb, VAR min, VAR max, CMPFUNC *cmp)
 {
 	VAR *swap, *pta, *pts, *ptd, range, moduler;
@@ -133,15 +135,11 @@ void FUNC(wolf_partition)(VAR *array, VAR *aux, size_t aux_size, size_t nmemb, V
 	}
 	else
 	{
-#if 0
-		buckets = nmemb > 8 * 65536 ? 65536 : nmemb / 8;
-		moduler = range / buckets + 1;
-#else
 		buckets = nmemb <= 4 * 65536 ? nmemb / 4 : 1024;
+
 		for (moduler = 4 ; moduler <= range / buckets ; moduler *= 2) {}
 
 		buckets = range / moduler + 1;
-#endif
 	}
 
 	limit = (nmemb / buckets) * 4;
@@ -203,7 +201,8 @@ void FUNC(wolf_partition)(VAR *array, VAR *aux, size_t aux_size, size_t nmemb, V
 
 			if (moduler > 1)
 			{
-				FUNC(fluxsort_swap)(pta, pts, cnt, cnt, cmp);
+				FUNC(wolfsort)(pta, cnt, cmp);
+//				FUNC(fluxsort_swap)(pta, pts, cnt, cnt, cmp);
 			}
 			pta += cnt;
 		}

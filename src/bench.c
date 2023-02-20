@@ -352,7 +352,7 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 				case 's' + 'k' * 32 + 'i' * 1024: skipsort(array, max, size, cmpf); break;
 #endif
 #ifdef WOLFSORT_H
-				case 'w' + 'o' * 32 + 'l' * 1024: wolfsort_prim(array, max, size + 1); break;
+				case 'w' + 'o' * 32 + 'l' * 1024: wolfsort(array, max, size, cmpf); break;
 #endif
 				case 'q' + 's' * 32 + 'o' * 1024: qsort(array, max, size, cmpf); break;
 
