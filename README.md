@@ -78,7 +78,8 @@ fluxsort on the deviant elements once partitioning finishes. Fluxsort is adaptiv
 strong against distributions where wolfsort is weak.
 
 The overall performance gain from incorporating dropsort into wolfsort is approximately 20%, but can reach
-an order of magnitude when the fallback is synergetic with fluxsort.
+an order of magnitude when the fallback is synergetic with fluxsort. Deviant distributions can deceive
+wolfsort for a time, but not a very long time.
 
 Small number sorting
 --------------------
