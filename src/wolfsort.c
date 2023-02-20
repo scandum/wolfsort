@@ -114,6 +114,7 @@ inline void FUNC(wolf_unguarded_insert)(VAR *array, size_t offset, size_t nmemb,
 }
 
 void FUNC(wolfsort)(VAR *array, size_t nmemb, CMPFUNC *cmp);
+void FUNC(wolfsort_swap)(VAR *array, VAR *swap, size_t swap_size, size_t nmemb, CMPFUNC *cmp);
 
 void FUNC(wolf_partition)(VAR *array, VAR *aux, size_t aux_size, size_t nmemb, VAR min, VAR max, CMPFUNC *cmp)
 {
@@ -201,8 +202,7 @@ void FUNC(wolf_partition)(VAR *array, VAR *aux, size_t aux_size, size_t nmemb, V
 
 			if (moduler > 1)
 			{
-				FUNC(wolfsort)(pta, cnt, cmp);
-//				FUNC(fluxsort_swap)(pta, pts, cnt, cnt, cmp);
+				FUNC(wolfsort_swap)(pta, swap, limit + pts - swap, cnt, cmp);
 			}
 			pta += cnt;
 		}
@@ -369,9 +369,9 @@ void FUNC(wolf_analyze)(VAR *array, VAR *swap, size_t swap_size, size_t nmemb, C
 	}
 
 #ifdef cmp
-	cnt = nmemb / 256; // switch to quadsort if at least 50% ordered
+	cnt = nmemb / 256; // switch to quadsort if more than 50% ordered
 #else
-	cnt = nmemb / 512; // switch to quadsort if at least 25% ordered
+	cnt = nmemb / 512; // switch to quadsort if more than 25% ordered
 #endif
 	asum = astreaks > cnt;
 	bsum = bstreaks > cnt;
@@ -505,5 +505,17 @@ void FUNC(wolfsort)(VAR *array, size_t nmemb, CMPFUNC *cmp)
 		FUNC(wolf_analyze)(array, swap, nmemb, nmemb, cmp);
 
 		free(swap);
+	}
+}
+
+void FUNC(wolfsort_swap)(VAR *array, VAR *swap, size_t swap_size, size_t nmemb, CMPFUNC *cmp)
+{
+	if (nmemb <= 132)
+	{
+		FUNC(quadsort_swap)(array, swap, nmemb, nmemb, cmp);
+	}
+	else
+	{
+		FUNC(wolf_analyze)(array, swap, swap_size, nmemb, cmp);
 	}
 }
