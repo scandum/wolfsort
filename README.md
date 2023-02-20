@@ -3,7 +3,7 @@ Intro
 
 This document describes a stable adaptive hybrid bucket / quick / merge / drop sort named wolfsort.
 The bucket sort, forming the core of wolfsort, is not a comparison sort, so wolfsort can be considered
-as a member of the radix-sort family. Quicksort and mergesort are well known. Dropsort gained popularity
+a member of the radix-sort family. Quicksort and mergesort are well known. Dropsort gained popularity
 after it was reinvented as Stalin sort. A [benchmark](https://github.com/scandum/wolfsort#benchmark-for-wolfsort-v1154-dripsort) is available at the bottom.
 
 Why a hybrid?
@@ -64,8 +64,9 @@ further to target the sweet spot.
 Dropsort
 --------
 Dropsort was first proposed as an alternative sorting algorithm by David Morgan in 2006, it makes one pass
-and is lossy. The algorithm was reinvented in 2018 as Stalin sort. The concept of dropping hash entries was
-independently developed by Marshall Lochbaum in 2018 and used in his 2022 release of rhsort (Robin Hood Sort).
+and is lossy. The algorithm was reinvented in 2018 as Stalin sort. The concept of dropping hash entries in
+a non-lossy manner was independently developed by Marshall Lochbaum in 2018 and is utilized in his 2022
+release of rhsort (Robin Hood Sort).
 
 Wolfsort allocates 4n memory to allow some deviancy in the data distribution and minimize bucket overflow.
 In the case an element is too deviant and overflows the bucket, it is copied in-place to the input
@@ -76,13 +77,14 @@ While a centrally planned partitioning system has its weaknesses, the worst case
 fluxsort on the deviant elements once partitioning finishes. Fluxsort is adaptive and is generally
 strong against distributions where wolfsort is weak.
 
-The overall performance gain from incorporating dropsort into wolfsort is approximately 20%.
+The overall performance gain from incorporating dropsort into wolfsort is approximately 20%, but can reach
+an order of magnitude when the fallback is synergetic with fluxsort.
 
 Small number sorting
 --------------------
 Since wolfsort uses auxiliary memory, each partition is stable once partitioning completes. The next
 step is to sort the content of each bucket using fluxsort. If the number of elements in a bucket is
-below 24, fluxsort defaults to quadsort, which is highly optimized for sorting small arrays using a
+below 32, fluxsort defaults to quadsort, which is highly optimized for sorting small arrays using a
 combination of branchless parity merges and twice-unguarded insertion.
 
 Once each bucket is sorted, all that remains is merging the two distributions of compliant and deviant
@@ -90,7 +92,8 @@ elements, and wolfsort is finished.
 
 Memory overhead
 ---------------
-Wolfsort requires 4n memory for the partitioning process and O(sqrt n) memory for the buckets.
+Wolfsort requires 4n memory for the partitioning process and n / 4 memory (up to a maximum of 65536)
+for the buckets.
 
 If not enough memory is available wolfsort falls back on fluxsort, which requires exactly 1n swap memory,
 and if that's not sufficient fluxsort falls back on quadsort which can sort in-place. It is an
@@ -250,33 +253,33 @@ halves each time the number of items doubles. A table with the best and average 
 
 |      Name |    Items | Type |     Best |  Average |  Compares | Samples |     Distribution |
 | --------- | -------- | ---- | -------- | -------- | --------- | ------- | ---------------- |
-|    rhsort |       10 |   32 | 0.131513 | 0.134111 |       0.0 |      10 |        random 10 |
-|  wolfsort |       10 |   32 | 0.051008 | 0.051118 |       0.0 |      10 |        random 10 |
-|   skasort |       10 |   32 | 0.100410 | 0.105244 |       0.0 |      10 |        random 10 |
+|    rhsort |       10 |   32 | 0.132610 | 0.136086 |       0.0 |      10 |        random 10 |
+|  wolfsort |       10 |   32 | 0.064719 | 0.064945 |       0.0 |      10 |        random 10 |
+|   skasort |       10 |   32 | 0.100334 | 0.100726 |       0.0 |      10 |        random 10 |
 |           |          |      |          |          |           |         |                  |
-|    rhsort |      100 |   32 | 0.067045 | 0.067871 |       0.0 |      10 |       random 100 |
-|  wolfsort |      100 |   32 | 0.110760 | 0.111562 |       0.0 |      10 |       random 100 |
-|   skasort |      100 |   32 | 0.232155 | 0.232376 |       0.0 |      10 |       random 100 |
+|    rhsort |      100 |   32 | 0.070575 | 0.071462 |       0.0 |      10 |       random 100 |
+|  wolfsort |      100 |   32 | 0.135128 | 0.135357 |       0.0 |      10 |       random 100 |
+|   skasort |      100 |   32 | 0.229353 | 0.229665 |       0.0 |      10 |       random 100 |
 |           |          |      |          |          |           |         |                  |
-|    rhsort |     1000 |   32 | 0.054274 | 0.054540 |       0.0 |      10 |      random 1000 |
-|  wolfsort |     1000 |   32 | 0.095062 | 0.095328 |       0.0 |      10 |      random 1000 |
-|   skasort |     1000 |   32 | 0.056759 | 0.056964 |       0.0 |      10 |      random 1000 |
+|    rhsort |     1000 |   32 | 0.056956 | 0.057145 |       0.0 |      10 |      random 1000 |
+|  wolfsort |     1000 |   32 | 0.106792 | 0.107098 |       0.0 |      10 |      random 1000 |
+|   skasort |     1000 |   32 | 0.056963 | 0.057122 |       0.0 |      10 |      random 1000 |
 |           |          |      |          |          |           |         |                  |
-|    rhsort |    10000 |   32 | 0.055843 | 0.056260 |       0.0 |      10 |     random 10000 |
-|  wolfsort |    10000 |   32 | 0.092480 | 0.092637 |       0.0 |      10 |     random 10000 |
-|   skasort |    10000 |   32 | 0.058090 | 0.058317 |       0.0 |      10 |     random 10000 |
+|    rhsort |    10000 |   32 | 0.057518 | 0.057828 |       0.0 |      10 |     random 10000 |
+|  wolfsort |    10000 |   32 | 0.098815 | 0.099122 |       0.0 |      10 |     random 10000 |
+|   skasort |    10000 |   32 | 0.058918 | 0.059145 |       0.0 |      10 |     random 10000 |
 |           |          |      |          |          |           |         |                  |
-|    rhsort |   100000 |   32 | 0.069535 | 0.070230 |       0.0 |      10 |    random 100000 |
-|  wolfsort |   100000 |   32 | 0.098330 | 0.098880 |       0.0 |      10 |    random 100000 |
-|   skasort |   100000 |   32 | 0.062893 | 0.063044 |       0.0 |      10 |    random 100000 |
+|    rhsort |   100000 |   32 | 0.070904 | 0.071506 |       0.0 |      10 |    random 100000 |
+|  wolfsort |   100000 |   32 | 0.107784 | 0.108399 |       0.0 |      10 |    random 100000 |
+|   skasort |   100000 |   32 | 0.062774 | 0.063009 |       0.0 |      10 |    random 100000 |
 |           |          |      |          |          |           |         |                  |
-|    rhsort |  1000000 |   32 | 0.178629 | 0.184670 |       0.0 |      10 |   random 1000000 |
-|  wolfsort |  1000000 |   32 | 0.150146 | 0.152040 |       0.0 |      10 |   random 1000000 |
-|   skasort |  1000000 |   32 | 0.068434 | 0.069190 |       0.0 |      10 |   random 1000000 |
+|    rhsort |  1000000 |   32 | 0.180159 | 0.184840 |       0.0 |      10 |   random 1000000 |
+|  wolfsort |  1000000 |   32 | 0.149275 | 0.149856 |       0.0 |      10 |   random 1000000 |
+|   skasort |  1000000 |   32 | 0.068193 | 0.068831 |       0.0 |      10 |   random 1000000 |
 |           |          |      |          |          |           |         |                  |
-|    rhsort | 10000000 |   32 | 0.373823 | 0.417923 |         0 |      10 |  random 10000000 |
-|  wolfsort | 10000000 |   32 | 0.427918 | 0.428926 |         0 |      10 |  random 10000000 |
-|   skasort | 10000000 |   32 | 0.114597 | 0.115324 |         0 |      10 |  random 10000000 |
+|    rhsort | 10000000 |   32 | 0.408969 | 0.429529 |         0 |      10 |  random 10000000 |
+|  wolfsort | 10000000 |   32 | 0.193792 | 0.194660 |         0 |      10 |  random 10000000 |
+|   skasort | 10000000 |   32 | 0.114803 | 0.115355 |         0 |      10 |  random 10000000 |
 
 </details>
 
