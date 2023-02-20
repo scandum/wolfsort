@@ -78,7 +78,6 @@ char *sorts[] = { "*", "blitsort", "crumsort", "fluxsort", "gridsort", "quadsort
 #if __has_include("wolfsort.h")
   #include "wolfsort.h" // curl "https://raw.githubusercontent.com/scandum/wolfsort/master/src/wolfsort.{c,h}" -o "wolfsort.#1"
 #endif
-#include "dripsort.h"
 
 #if __has_include("rhsort.c")
     #define RHSORT_C
@@ -353,7 +352,7 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 				case 's' + 'k' * 32 + 'i' * 1024: skipsort(array, max, size, cmpf); break;
 #endif
 #ifdef WOLFSORT_H
-				case 'w' + 'o' * 32 + 'l' * 1024: wolfsort(array, max, size, cmpf); break;
+				case 'w' + 'o' * 32 + 'l' * 1024: wolfsort_prim(array, max, size + 1); break;
 #endif
 				case 'q' + 's' * 32 + 'o' * 1024: qsort(array, max, size, cmpf); break;
 
@@ -786,12 +785,12 @@ void range_test(int max, int samples, int repetitions, int seed)
 	return;
 }
 
-#define VAR int
+#define VAR unsigned int
 
 int main(int argc, char **argv)
 {
 	int max = 100000;
-	int samples = 20;
+	int samples = 10;
 	int repetitions = 1;
 	int seed = 0;
 	size_t cnt, mem;
@@ -1139,7 +1138,7 @@ int main(int argc, char **argv)
 
 	for (cnt = 1 ; cnt < max ; cnt++)
 	{
-		if (cnt == quad1 + 1 || cnt == half1 + 1 || cnt == span3 + 1) continue;
+		if (cnt == quad1 || cnt == half1 || cnt == span3) continue;
 
 		if (r_array[cnt] >= r_array[cnt - 1])
 		{

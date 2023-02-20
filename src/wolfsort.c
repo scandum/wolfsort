@@ -69,11 +69,55 @@ void FUNC(unstable_count)(VAR *array, size_t nmemb, size_t buckets, VAR min, CMP
 }
 #endif
 
+inline void FUNC(wolf_unguarded_insert)(VAR *array, size_t offset, size_t nmemb, CMPFUNC *cmp)
+{
+	VAR key, *pta, *end;
+	size_t i, top, x, y;
+
+	for (i = offset ; i < nmemb ; i++)
+	{
+		pta = end = array + i;
+
+		if (cmp(--pta, end) <= 0)
+		{
+			continue;
+		}
+
+		key = *end;
+
+		if (cmp(array + 1, &key) > 0)
+		{
+			top = i - 1;
+
+			do
+			{
+				*end-- = *pta--;
+			}
+			while (--top);
+
+			*end-- = key;
+		}
+		else
+		{
+			do
+			{
+				*end-- = *pta--;
+				*end-- = *pta--;
+			}
+			while (cmp(pta, &key) > 0);
+
+			end[0] = end[1];
+			end[1] = key;
+		}
+		x = cmp(end, end + 1) > 0; y = !x; key = end[y]; end[0] = end[x]; end[1] = key;
+	}
+}
+
 void FUNC(wolf_partition)(VAR *array, VAR *aux, size_t aux_size, size_t nmemb, VAR min, VAR max, CMPFUNC *cmp)
 {
 	VAR *swap, *pta, *pts, *ptd, range, moduler;
 	size_t index, cnt, loop, dmemb, buckets;
-	unsigned short *count, limit;
+	unsigned int *count, limit;
 
 	if (nmemb < 32)
 	{
@@ -82,20 +126,27 @@ void FUNC(wolf_partition)(VAR *array, VAR *aux, size_t aux_size, size_t nmemb, V
 
 	range = max - min;
 
-	if (range < 65536 || range <= nmemb / 4)
+	if (range >> 16 == 0 || range <= nmemb / 4)
 	{
 		buckets = range + 1;
 		moduler = 1;
 	}
 	else
 	{
+#if 0
 		buckets = nmemb > 8 * 65536 ? 65536 : nmemb / 8;
 		moduler = range / buckets + 1;
+#else
+		buckets = nmemb <= 4 * 65536 ? nmemb / 4 : 1024;
+		for (moduler = 4 ; moduler <= range / buckets ; moduler *= 2) {}
+
+		buckets = range / moduler + 1;
+#endif
 	}
 
 	limit = (nmemb / buckets) * 4;
 
-	count = calloc(sizeof(short), buckets);
+	count = calloc(sizeof(int), buckets);
 
 	swap = aux;
 
@@ -181,10 +232,14 @@ void FUNC(wolf_partition)(VAR *array, VAR *aux, size_t aux_size, size_t nmemb, V
 
 void FUNC(wolf_minmax)(VAR *min, VAR *max, VAR *pta, VAR *ptb, VAR *ptc, VAR *ptd, CMPFUNC *cmp)
 {
-	if (cmp(min, pta) > 0) *min = *pta; else if (cmp(pta, max) > 0) *max = *pta;
-	if (cmp(min, ptb) > 0) *min = *ptb; else if (cmp(ptb, max) > 0) *max = *ptb;
-	if (cmp(min, ptc) > 0) *min = *ptc; else if (cmp(ptc, max) > 0) *max = *ptc;
-	if (cmp(min, ptd) > 0) *min = *ptd; else if (cmp(ptd, max) > 0) *max = *ptd;
+	if (cmp(min, pta) > 0) *min = *pta;
+	if (cmp(pta, max) > 0) *max = *pta;
+	if (cmp(min, ptb) > 0) *min = *ptb;
+	if (cmp(ptb, max) > 0) *max = *ptb;
+	if (cmp(min, ptc) > 0) *min = *ptc;
+	if (cmp(ptc, max) > 0) *max = *ptc;
+	if (cmp(min, ptd) > 0) *min = *ptd;
+	if (cmp(ptd, max) > 0) *max = *ptd;
 }
 
 void FUNC(wolf_analyze)(VAR *array, VAR *swap, size_t swap_size, size_t nmemb, CMPFUNC *cmp)
@@ -255,6 +310,12 @@ void FUNC(wolf_analyze)(VAR *array, VAR *swap, size_t swap_size, size_t nmemb, C
 		dbalance += cmp(ptd, ptd + 1) > 0; ptd++;
 	}
 	FUNC(wolf_minmax)(&min, &max, pta, ptb, ptc, ptd, cmp);
+
+	if (nmemb <= 132)
+	{
+		FUNC(wolf_partition)(array, swap, swap_size, nmemb, min, max, cmp);
+		return;
+	}
 
 	cnt = abalance + bbalance + cbalance + dbalance;
 
@@ -407,12 +468,12 @@ void FUNC(wolf_analyze)(VAR *array, VAR *swap, size_t swap_size, size_t nmemb, C
 		}
 		else
 		{
-			FUNC(galloping_merge)(swap + half1, array + half1, quad3, quad4, cmp);
+			FUNC(cross_merge)(swap + half1, array + half1, quad3, quad4, cmp);
 		}
 	}
 	else
 	{
-		FUNC(galloping_merge)(swap, array, quad1, quad2, cmp);
+		FUNC(cross_merge)(swap, array, quad1, quad2, cmp);
 
 		if (cmp(ptc, ptc + 1) <= 0)
 		{
@@ -420,26 +481,17 @@ void FUNC(wolf_analyze)(VAR *array, VAR *swap, size_t swap_size, size_t nmemb, C
 		}
 		else
 		{
-			FUNC(galloping_merge)(swap + half1, ptb + 1, quad3, quad4, cmp);
+			FUNC(cross_merge)(swap + half1, ptb + 1, quad3, quad4, cmp);
 		}
 	}
-	FUNC(galloping_merge)(array, swap, half1, half2, cmp);
+	FUNC(cross_merge)(array, swap, half1, half2, cmp);
 }
 
 void FUNC(wolfsort)(VAR *array, size_t nmemb, CMPFUNC *cmp)
 {
 	if (nmemb <= 132)
 	{
-		if (nmemb <= 24)
-		{
-			FUNC(tail_swap)(array, nmemb, cmp);
-		}
-		else
-		{
-			VAR swap[nmemb];
-
-			FUNC(flux_partition)(array, swap, array, swap + nmemb, nmemb, cmp);
-		}
+		FUNC(quadsort)(array, nmemb, cmp);
 	}
 	else
 	{

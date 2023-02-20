@@ -69,15 +69,15 @@ typedef int CMPFUNC (const void *a, const void *b);
 // │       └─────┘ └──────┘   └─────┘ └─────┘   └─┘    │//
 // └───────────────────────────────────────────────────┘//
 //////////////////////////////////////////////////////////
-
-#define VAR unsigned int
+/*
+#define VAR int
 #define FUNC(NAME) NAME##32
 
 #include "wolfsort.c"
 
 #undef VAR
 #undef FUNC
-
+*/
 // wolfsort_prim
 
 #define VAR int
@@ -114,15 +114,15 @@ typedef int CMPFUNC (const void *a, const void *b);
 // │        └────┘      └─┘   └─────┘ └─────┘   └─┘    │//
 // └───────────────────────────────────────────────────┘//
 //////////////////////////////////////////////////////////
-
-#define VAR unsigned long long
+/*
+#define VAR long long
 #define FUNC(NAME) NAME##64
 
 #include "wolfsort.c"
 
 #undef VAR
 #undef FUNC
-
+*/
 // wolfsort_prim
 
 #define VAR long long
@@ -166,7 +166,7 @@ typedef int CMPFUNC (const void *a, const void *b);
 //└────────────────────────────────────────────────────┘//
 //////////////////////////////////////////////////////////
 
-#define VAR unsigned char
+#define VAR char
 #define FUNC(NAME) NAME##8
 
 #include "wolfsort.c"
@@ -185,7 +185,7 @@ typedef int CMPFUNC (const void *a, const void *b);
 //└────────────────────────────────────────────────────┘//
 //////////////////////////////////////////////////////////
 
-#define VAR unsigned short
+#define VAR short
 #define FUNC(NAME) NAME##16
 
 #include "wolfsort.c"
@@ -244,12 +244,12 @@ void wolfsort(void *array, size_t nmemb, size_t size, CMPFUNC *cmp)
 			return;
 
 		case sizeof(int):
-			wolfsort32(array, nmemb, cmp);
+			wolfsort_uint32(array, nmemb, cmp);
 			return;
 
 		case sizeof(long long):
-//			wolfsort64(array, nmemb, cmp);
-			fluxsort64(array, nmemb, cmp); // fluxsort generally beats wolfsort for 64+ bit types
+			wolfsort_uint64(array, nmemb, cmp);
+//			fluxsort64(array, nmemb, cmp); // fluxsort generally beats wolfsort for 64+ bit types
 			return;
 
 		case sizeof(long double):
