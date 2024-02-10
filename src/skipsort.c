@@ -224,24 +224,26 @@ int FUNC(skip_analyze)(VAR *array, VAR *swap, size_t swap_size, size_t nmemb, CM
 
 void FUNC(skipsort)(void *array, size_t nmemb, CMPFUNC *cmp)
 {
+	VAR *pta = (VAR *) array;
+
 	if (nmemb <= 96)
 	{
 		VAR swap[nmemb];
 
-		FUNC(tail_swap)(array, swap, nmemb, cmp);
+		FUNC(tail_swap)(pta, swap, nmemb, cmp);
 	}
 	else
 	{
-		VAR *swap = malloc(nmemb * sizeof(VAR));
+		VAR *swap = (VAR *) malloc(nmemb * sizeof(VAR));
 
 		if (swap == NULL)
 		{
-			FUNC(quadsort)(array, nmemb, cmp);
+			FUNC(quadsort)(pta, nmemb, cmp);
 			return;
 		}
-		if (FUNC(skip_analyze)(array, swap, nmemb, nmemb, cmp) == 0)
+		if (FUNC(skip_analyze)(pta, swap, nmemb, nmemb, cmp) == 0)
 		{
-			FUNC(quad_merge)(array, swap, nmemb, nmemb, 32, cmp);
+			FUNC(quad_merge)(pta, swap, nmemb, nmemb, 32, cmp);
 		}
 		free(swap);
 	}

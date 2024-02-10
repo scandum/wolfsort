@@ -326,8 +326,8 @@ void FUNC(insert_y_node)(STRUCT(x_node) *x_node, size_t y)
 
 	if (x_node->y_size % BSC_Z == 0)
 	{
-		x_node->y_base = realloc(x_node->y_base, (x_node->y_size + BSC_Z) * sizeof(VAR));
-		x_node->y_axis = realloc(x_node->y_axis, (x_node->y_size + BSC_Z) * sizeof(STRUCT(y_node) *));
+		x_node->y_base = (VAR *) realloc(x_node->y_base, (x_node->y_size + BSC_Z) * sizeof(VAR));
+		x_node->y_axis = (STRUCT(y_node) **) realloc(x_node->y_axis, (x_node->y_size + BSC_Z) * sizeof(STRUCT(y_node) *));
 	}
 
 	while (y < --end)
