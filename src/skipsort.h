@@ -1,13 +1,7 @@
-// gridsort 1.2.1.3 - Igor van den Hoven ivdhoven@gmail.com
+// skipsort 1.2.1.3 - Igor van den Hoven ivdhoven@gmail.com
 
-#ifndef GRIDSORT_H
-#define GRIDSORT_H
-
-//#define cmp(a,b) (*(a) > *(b))
-
-#ifndef QUADSORT_H
-  #include "quadsort.h"
-#endif
+#ifndef SKIPSORT_H
+#define SKIPSORT_H
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -16,10 +10,18 @@
 
 typedef int CMPFUNC (const void *a, const void *b);
 
-#define BSC_X 32
-#define BSC_Y 2
+//#define cmp(a,b) (*(a) > *(b))
 
-size_t  BSC_Z;
+#ifndef QUADSORT_H
+  #include "quadsort.h"
+#endif
+#ifndef FLUXSORT_H
+  #include "fluxsort.h"
+#endif
+
+// When sorting an array of pointers, like a string array, QUAD_CACHE needs to
+// be adjusted in quadsort.h for proper performance when sorting large arrays.
+
 
 //////////////////////////////////////////////////////////
 //┌────────────────────────────────────────────────────┐//
@@ -32,15 +34,13 @@ size_t  BSC_Z;
 //└────────────────────────────────────────────────────┘//
 //////////////////////////////////////////////////////////
 
-#undef VAR
-#undef FUNC
-#undef STRUCT
-
 #define VAR char
 #define FUNC(NAME) NAME##8
-#define STRUCT(NAME) struct NAME##8
 
-#include "gridsort.c"
+#include "skipsort.c"
+
+#undef VAR
+#undef FUNC
 
 //////////////////////////////////////////////////////////
 //┌────────────────────────────────────────────────────┐//
@@ -53,15 +53,13 @@ size_t  BSC_Z;
 //└────────────────────────────────────────────────────┘//
 //////////////////////////////////////////////////////////
 
-#undef VAR
-#undef FUNC
-#undef STRUCT
-
 #define VAR short
 #define FUNC(NAME) NAME##16
-#define STRUCT(NAME) struct NAME##16
 
-#include "gridsort.c"
+#include "skipsort.c"
+
+#undef VAR
+#undef FUNC
 
 //////////////////////////////////////////////////////////
 // ┌───────────────────────────────────────────────────┐//
@@ -74,15 +72,27 @@ size_t  BSC_Z;
 // └───────────────────────────────────────────────────┘//
 //////////////////////////////////////////////////////////
 
-#undef VAR
-#undef FUNC
-#undef STRUCT
-
 #define VAR int
 #define FUNC(NAME) NAME##32
-#define STRUCT(NAME) struct NAME##32
 
-#include "gridsort.c"
+#include "skipsort.c"
+
+#undef VAR
+#undef FUNC
+
+#ifndef cmp
+  #define cmp(a,b) (*(a) > *(b))
+
+  #define VAR int
+  #define FUNC(NAME) NAME##_int32
+
+  #include "skipsort.c"
+
+  #undef VAR
+  #undef FUNC
+
+  #undef cmp
+#endif
 
 //////////////////////////////////////////////////////////
 // ┌───────────────────────────────────────────────────┐//
@@ -95,15 +105,27 @@ size_t  BSC_Z;
 // └───────────────────────────────────────────────────┘//
 //////////////////////////////////////////////////////////
 
-#undef VAR
-#undef FUNC
-#undef STRUCT
-
 #define VAR long long
 #define FUNC(NAME) NAME##64
-#define STRUCT(NAME) struct NAME##64
 
-#include "gridsort.c"
+#include "skipsort.c"
+
+#undef VAR
+#undef FUNC
+
+#ifndef cmp
+  #define cmp(a,b) (*(a) > *(b))
+
+  #define VAR long long
+  #define FUNC(NAME) NAME##_int64
+
+  #include "skipsort.c"
+
+  #undef VAR
+  #undef FUNC
+
+  #undef cmp
+#endif
 
 //////////////////////////////////////////////////////////
 //┌────────────────────────────────────────────────────┐//
@@ -116,58 +138,65 @@ size_t  BSC_Z;
 //└────────────────────────────────────────────────────┘//
 //////////////////////////////////////////////////////////
 
-#undef VAR
-#undef FUNC
-#undef STRUCT
-
 #define VAR long double
 #define FUNC(NAME) NAME##128
-#define STRUCT(NAME) struct NAME##128
 
-#include "gridsort.c"
+#include "skipsort.c"
 
-/////////////////////////////////////////////////////////////////////////////
-//┌───────────────────────────────────────────────────────────────────────┐//
-//│    ██████┐ ██████┐ ██████┐██████┐ ███████┐ ██████┐ ██████┐ ████████┐  │//
-//│   ██┌────┘ ██┌──██┐└─██┌─┘██┌──██┐██┌────┘██┌───██┐██┌──██┐└──██┌──┘  │//
-//│   ██│  ███┐██████┌┘  ██│  ██│  ██│███████┐██│   ██│██████┌┘   ██│     │//
-//│   ██│   ██│██┌──██┐  ██│  ██│  ██│└────██│██│   ██│██┌──██┐   ██│     │//
-//│   └██████┌┘██│  ██│██████┐██████┌┘███████│└██████┌┘██│  ██│   ██│     │//
-//│    └─────┘ └─┘  └─┘└─────┘└─────┘ └──────┘ └─────┘ └─┘  └─┘   └─┘     │//
-//└───────────────────────────────────────────────────────────────────────┘//
-/////////////////////////////////////////////////////////////////////////////
+#undef VAR
+#undef FUNC
 
-void gridsort(void *array, size_t nmemb, size_t size, CMPFUNC *cmp)
+////////////////////////////////////////////////////////////////////////
+//┌──────────────────────────────────────────────────────────────────┐//
+//│███████┐██┐  ██┐██████┐██████┐ ███████┐ ██████┐ ██████┐ ████████┐ │//
+//│██┌────┘██│ ██┌┘└─██┌─┘██┌──██┐██┌────┘██┌───██┐██┌──██┐└──██┌──┘ │//
+//│███████┐█████┌┘   ██│  ██████┌┘███████┐██│   ██│██████┌┘   ██│    │//
+//│└────██│██┌─██┐   ██│  ██┌───┘ └────██│██│   ██│██┌──██┐   ██│    │//
+//│███████│██│  ██┐██████┐██│     ███████│└██████┌┘██│  ██│   ██│    │//
+//│└──────┘└─┘  └─┘└─────┘└─┘     └──────┘ └─────┘ └─┘  └─┘   └─┘    │//
+//└──────────────────────────────────────────────────────────────────┘//
+////////////////////////////////////////////////////////////////////////
+
+void skipsort(void *array, size_t nmemb, size_t size, CMPFUNC *cmp)
 {
-	if (nmemb < BSC_X * BSC_X)
+	if (nmemb < 2)
 	{
-		return quadsort(array, nmemb, size, cmp);
+		return;
 	}
+#ifndef cmp
+	if (cmp == NULL)
+	{
+		switch (size)
+		{
+			case sizeof(int):
+				return skipsort_int32(array, nmemb, cmp);
+			case sizeof(long long):
+				return skipsort_int64(array, nmemb, cmp);
+		}
+		return assert(size == sizeof(int));
+	}
+#endif
 
 	switch (size)
 	{
 		case sizeof(char):
-			return gridsort8(array, nmemb, size, cmp);
+			return skipsort8(array, nmemb, cmp);
 
 		case sizeof(short):
-			return gridsort16(array, nmemb, size, cmp);
+			return skipsort16(array, nmemb, cmp);
 
 		case sizeof(int):
-			return gridsort32(array, nmemb, size, cmp);
+			return skipsort32(array, nmemb, cmp);
 
 		case sizeof(long long):
-			return gridsort64(array, nmemb, size, cmp);
+			return skipsort64(array, nmemb, cmp);
 
 		case sizeof(long double):
-			return gridsort128(array, nmemb, size, cmp);
+			return skipsort128(array, nmemb, cmp);
 
 		default:
-			assert(size == sizeof(char) || size == sizeof(short) || size == sizeof(int) || size == sizeof(long long) || size == sizeof(long double));
+			return assert(size == sizeof(char) || size == sizeof(short) || size == sizeof(int) || size == sizeof(long long) || size == sizeof(long double));
 	}
 }
-
-#undef VAR
-#undef FUNC
-#undef STRUCT
 
 #endif

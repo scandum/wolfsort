@@ -1,31 +1,4 @@
-/*
-	Copyright (C) 2014-2021 Igor van den Hoven ivdhoven@gmail.com
-*/
-
-/*
-	Permission is hereby granted, free of charge, to any person obtaining
-	a copy of this software and associated documentation files (the
-	"Software"), to deal in the Software without restriction, including
-	without limitation the rights to use, copy, modify, merge, publish,
-	distribute, sublicense, and/or sell copies of the Software, and to
-	permit persons to whom the Software is furnished to do so, subject to
-	the following conditions:
-
-	The above copyright notice and this permission notice shall be
-	included in all copies or substantial portions of the Software.
-
-	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-	MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-	IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-	CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-	TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-	SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/
-
-/*
-	gridsort 1.1.4.2
-*/
+// gridsort 1.2.1.3 - Igor van den Hoven ivdhoven@gmail.com
 
 STRUCT(x_node)
 {
@@ -48,20 +21,8 @@ STRUCT(x_node) *FUNC(create_grid)(VAR *array, size_t nmemb, CMPFUNC *cmp)
 	STRUCT(x_node) *x_node = (STRUCT(x_node) *) malloc(sizeof(STRUCT(x_node)));
 	STRUCT(y_node) *y_node;
 
-//	for (BSC_Z = BSC_X ; BSC_Z * BSC_Z * BSC_Y < nmemb ; BSC_Z *= 4);
 	for (BSC_Z = BSC_X ; BSC_Z * BSC_Z / 4 < nmemb ; BSC_Z *= 4);
-/*
-	x_node->swap = (VAR *) malloc(2 * nmemb * sizeof(VAR));
 
-	if (x_node->swap == NULL)
-	{
-		printf("malloc error");
-	}
-	else
-	{
-		free(x_node->swap);
-	}
-*/
 	x_node->swap = (VAR *) malloc(BSC_Z * 2 * sizeof(VAR));
 
 	x_node->y_base = (VAR *) malloc(BSC_Z * sizeof(VAR));
@@ -109,28 +70,51 @@ void FUNC(twin_merge_cpy)(STRUCT(x_node) *x_node, VAR *dest, STRUCT(y_node) *y_n
 
 	FUNC(quadsort_swap)(ptr, x_node->swap, nmemb2, nmemb2, cmp);
 
-	while (tpl - ptl > 8 && tpr - ptr > 8)
+	while (1)
 	{
-		if (cmp(ptl + 7, ptr) <= 0)
+		if (tpl - ptl > 8)
 		{
-			loop = 8; do *ptd++ = *ptl++; while (--loop); continue;
+			ptl8_ptr: if (cmp(ptl + 7, ptr) <= 0)
+			{
+				memcpy(ptd, ptl, 8 * sizeof(VAR)); ptd += 8; ptl += 8;
+
+				if (tpl - ptl > 8) {goto ptl8_ptr;} continue;
+			}
+
+			tpl8_tpr: if (cmp(tpl - 7, tpr) > 0)
+			{
+				tpd -= 7; tpl -= 7; memcpy(tpd--, tpl--, 8 * sizeof(VAR));
+
+				if (tpl - ptl > 8) {goto tpl8_tpr;} continue;
+			}
 		}
-		if (cmp(ptl, ptr + 7) > 0)
+
+		if (tpr - ptr > 8)
 		{
-			loop = 8; do *ptd++ = *ptr++; while (--loop); continue;
+			ptl_ptr8: if (cmp(ptl, ptr + 7) > 0)
+			{
+				memcpy(ptd, ptr, 8 * sizeof(VAR)); ptd += 8; ptr += 8;
+
+				if (tpr - ptr > 8) {goto ptl_ptr8;} continue;
+			}
+
+			tpl_tpr8: if (cmp(tpl, tpr - 7) <= 0)
+			{
+				tpd -= 7; tpr -= 7; memcpy(tpd--, tpr--, 8 * sizeof(VAR));
+
+				if (tpr - ptr > 8) {goto tpl_tpr8;} continue;
+			}
 		}
-		if (cmp(tpl, tpr - 7) <= 0)
+
+		if (tpd - ptd < 16)
 		{
-			loop = 8; do *tpd-- = *tpr--; while (--loop); continue;
+			break;
 		}
-		if (cmp(tpl - 7, tpr) > 0)
-		{
-			loop = 8; do *tpd-- = *tpl--; while (--loop); continue;
-		}
+
 		loop = 8; do
 		{
-			x = cmp(ptl, ptr) <= 0; y = !x; ptd[x] = *ptr; ptr += y; ptd[y] = *ptl; ptl += x; ptd++;
-			x = cmp(tpl, tpr) <= 0; y = !x; tpd--; tpd[x] = *tpr; tpr -= x; tpd[y] = *tpl; tpl -= y;
+			head_branchless_merge(ptd, x, ptl, ptr, cmp);
+			tail_branchless_merge(tpd, y, tpl, tpr, cmp);
 		}
 		while (--loop);
 	}
@@ -169,15 +153,16 @@ void FUNC(twin_merge_cpy)(STRUCT(x_node) *x_node, VAR *dest, STRUCT(y_node) *y_n
 void FUNC(parity_twin_merge)(VAR *ptl, VAR *ptr, VAR *ptd, VAR *tpd, size_t block, CMPFUNC *cmp)
 {
 	VAR *tpl, *tpr;
+#if !defined __clang__
 	unsigned char x, y;
-
+#endif
 	tpl = ptl + block - 1;
 	tpr = ptr + block - 1;
 
 	for (block-- ; block ; block--)
 	{
-		x = cmp(ptl, ptr) <= 0; y = !x; ptd[x] = *ptr; ptr += y; ptd[y] = *ptl; ptl += x; ptd++;
-		x = cmp(tpl, tpr) <= 0; y = !x; tpd--; tpd[x] = *tpr; tpr -= x; tpd[y] = *tpl; tpl -= y;
+		head_branchless_merge(ptd, x, ptl, ptr, cmp);
+		tail_branchless_merge(tpd, y, tpl, tpr, cmp);
 	}
 	*ptd = cmp(ptl, ptr) <= 0 ? *ptl : *ptr;
 	*tpd = cmp(tpl, tpr)  > 0 ? *tpl : *tpr;

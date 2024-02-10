@@ -1,42 +1,14 @@
-/*
-        Copyright (C) 2014-2023 Igor van den Hoven ivdhoven@gmail.com
-*/
-
-/*
-        Permission is hereby granted, free of charge, to any person obtaining
-        a copy of this software and associated documentation files (the
-        "Software"), to deal in the Software without restriction, including
-        without limitation the rights to use, copy, modify, merge, publish,
-        distribute, sublicense, and/or sell copies of the Software, and to
-        permit persons to whom the Software is furnished to do so, subject to
-        the following conditions:
-
-        The above copyright notice and this permission notice shall be
-        included in all copies or substantial portions of the Software.
-
-        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-        EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-        MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-        IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-        CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-        TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-        SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/
-
-/*
-	wolfsort 1.2.1.1
-*/
-
+// wolfsort 1.2.1.3 - Igor van den Hoven ivdhoven@gmail.com
 
 //#define GODMODE 
 
-#ifdef GODMODE // inspired by rhsort, technically unstable. Wolfsort likes stables.
+#ifdef GODMODE // inspired by rhsort, technically unstable.
 
 void FUNC(unstable_count)(VAR *array, size_t nmemb, size_t buckets, VAR min, CMPFUNC *cmp)
 {
 	VAR *pta;
 	size_t index;
-	size_t *count = calloc(sizeof(size_t), buckets), loop;
+	size_t *count = (size_t *) calloc(sizeof(size_t), buckets), loop;
 
 	pta = array;
 
@@ -113,7 +85,6 @@ inline void FUNC(wolf_unguarded_insert)(VAR *array, size_t offset, size_t nmemb,
 	}
 }
 
-void FUNC(wolfsort)(VAR *array, size_t nmemb, CMPFUNC *cmp);
 void FUNC(wolfsort_swap)(VAR *array, VAR *swap, size_t swap_size, size_t nmemb, CMPFUNC *cmp);
 
 void FUNC(wolf_partition)(VAR *array, VAR *aux, size_t aux_size, size_t nmemb, VAR min, VAR max, CMPFUNC *cmp)
@@ -129,7 +100,7 @@ void FUNC(wolf_partition)(VAR *array, VAR *aux, size_t aux_size, size_t nmemb, V
 
 	range = max - min;
 
-	if (range >> 16 == 0 || range <= nmemb / 4)
+	if (range >> 16 == 0 || (size_t) range <= nmemb / 4)
 	{
 		buckets = range + 1;
 		moduler = 1;
@@ -138,20 +109,20 @@ void FUNC(wolf_partition)(VAR *array, VAR *aux, size_t aux_size, size_t nmemb, V
 	{
 		buckets = nmemb <= 4 * 65536 ? nmemb / 4 : 1024;
 
-		for (moduler = 4 ; moduler <= range / buckets ; moduler *= 2) {}
+		for (moduler = 4 ; (size_t) moduler <= range / buckets ; moduler *= 2) {}
 
 		buckets = range / moduler + 1;
 	}
 
 	limit = (nmemb / buckets) * 4;
 
-	count = calloc(sizeof(int), buckets);
+	count = (unsigned int *) calloc(sizeof(int), buckets);
 
 	swap = aux;
 
 	if (limit * buckets > aux_size)
 	{
-		swap = malloc(limit * buckets * sizeof(VAR));
+		swap = (VAR *) malloc(limit * buckets * sizeof(VAR));
 	}
 
 	if (count == NULL || swap == NULL)
@@ -213,14 +184,7 @@ void FUNC(wolf_partition)(VAR *array, VAR *aux, size_t aux_size, size_t nmemb, V
 	{
 		FUNC(fluxsort_swap)(ptd, swap, dmemb, dmemb, cmp);
 
-		if (dmemb < nmemb - dmemb)
-		{
-			FUNC(partial_backward_merge)(array, swap, nmemb, nmemb - dmemb, cmp);
-		}
-		else
-		{
-			FUNC(partial_forward_merge)(array, swap, nmemb, nmemb - dmemb, cmp);
-		}
+		FUNC(partial_backward_merge)(array, swap, nmemb, nmemb, nmemb - dmemb, cmp);
 	}
 	if (limit * buckets > aux_size)
 	{
@@ -309,12 +273,6 @@ void FUNC(wolf_analyze)(VAR *array, VAR *swap, size_t swap_size, size_t nmemb, C
 		dbalance += cmp(ptd, ptd + 1) > 0; ptd++;
 	}
 	FUNC(wolf_minmax)(&min, &max, pta, ptb, ptc, ptd, cmp);
-
-	if (nmemb <= 132)
-	{
-		FUNC(wolf_partition)(array, swap, swap_size, nmemb, min, max, cmp);
-		return;
-	}
 
 	cnt = abalance + bbalance + cbalance + dbalance;
 
@@ -486,23 +444,25 @@ void FUNC(wolf_analyze)(VAR *array, VAR *swap, size_t swap_size, size_t nmemb, C
 	FUNC(cross_merge)(array, swap, half1, half2, cmp);
 }
 
-void FUNC(wolfsort)(VAR *array, size_t nmemb, CMPFUNC *cmp)
+void FUNC(wolfsort)(void *array, size_t nmemb, CMPFUNC *cmp)
 {
+	VAR *pta = (VAR *) array;
+
 	if (nmemb <= 132)
 	{
-		FUNC(quadsort)(array, nmemb, cmp);
+		FUNC(quadsort)(pta, nmemb, cmp);
 	}
 	else
 	{
-		VAR *swap = malloc(nmemb * sizeof(VAR));
+		VAR *swap = (VAR *) malloc(nmemb * sizeof(VAR));
 
 		if (swap == NULL)
 		{
-			FUNC(quadsort)(array, nmemb, cmp);
+			FUNC(quadsort)(pta, nmemb, cmp);
 			return;
 		}
 
-		FUNC(wolf_analyze)(array, swap, nmemb, nmemb, cmp);
+		FUNC(wolf_analyze)(pta, swap, nmemb, nmemb, cmp);
 
 		free(swap);
 	}
